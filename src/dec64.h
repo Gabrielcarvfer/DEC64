@@ -57,8 +57,54 @@ extern dec64 dec64_signum(dec64 number)                         /* signature */;
 extern dec64 dec64_subtract(dec64 minuend, dec64 subtrahend)   /* difference */;
 
 
-#endif //DEC64
 
 #ifdef __cplusplus
 }
-#endif
+
+class Dec64{
+    public:
+        Dec64(int64 coefficient=0, int64 exponent=0);
+        ~Dec64();
+
+        Dec64 coefficient();
+        Dec64 exponent();
+        int64 coefficient_to_int();
+        int64 exponent_to_int();
+        Dec64 abs();
+        Dec64 ceil();
+        Dec64 floor();
+        Dec64 round(Dec64 places);
+        Dec64 half();
+        Dec64 set_val(dec64 val);
+        Dec64 neg();
+        int64 to_int();
+        Dec64 integer_divide(const Dec64 &a);
+        bool  is_zero();
+        bool  is_nan();
+        bool  is_integer();
+        Dec64 signum();
+        Dec64 normal();
+
+
+
+        Dec64 operator!();
+        Dec64 operator+(const Dec64& a);
+        Dec64 operator++();
+        Dec64 operator-(const Dec64& a);
+        Dec64 operator--();
+        Dec64 operator*(const Dec64& a);
+        Dec64 operator/(const Dec64& a);
+        Dec64 operator%(const Dec64& a);
+        bool  operator<(const Dec64& a);
+        bool  operator>(const Dec64& a);
+        bool  operator==(const Dec64& a);
+        bool  operator!=(const Dec64& a);
+        bool  operator<=(const Dec64& a);
+        bool  operator>=(const Dec64& a);
+
+
+        dec64 value;
+};
+#endif //__cplusplus
+
+#endif //DEC64
