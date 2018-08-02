@@ -57,22 +57,22 @@ Dec64 negative_maxnum;
 Dec64 negative_pi;
 
 static void define_constants() {
-    dec64nan.value     = DEC64_NAN;               /* not a number */
-    nannan.value     = 32896;                   /* a non-normal nan */
-    zero  .value     = DEC64_ZERO;              /* 0 */
-    zip   .value     = 250;                     /* a non normal 0 */
-    one   .value     = DEC64_ONE;       	    /* 1 */
-    two              = Dec64(2, 0);          	/* 2 */
-    three            = Dec64(3, 0);        		/* 3 */
-    four             = Dec64(4, 0);         	/* 4 */
-    five             = Dec64(5, 0);         	/* 5 */
-    six              = Dec64(6, 0);          	/* 6 */
-    seven            = Dec64(7, 0);        		/* 7 */
-    eight            = Dec64(8, 0);        		/* 8 */
-    nine             = Dec64(9, 0);         	/* 9 */
-    ten              = Dec64(10, 0);         	/* 10 */
-    minnum           = Dec64(1, -127);    		/* the smallest possible number */
-    epsilon          = Dec64(1, -16);    		/* the smallest number addable to 1 */
+    dec64nan         = Dec64(DEC64_NAN , 0, true);   /* not a number */
+    nannan           = Dec64(32896     , 0, true);   /* a non-normal nan */
+    zero             = Dec64(DEC64_ZERO, 0, true);   /* 0 */
+    zip              = Dec64(250       , 0, true);   /* a non normal 0 */
+    one              = Dec64(DEC64_ONE , 0, true);   /* 1 */
+    two              = Dec64(2);          	/* 2 */
+    three            = Dec64(3);        	/* 3 */
+    four             = Dec64(4);         	/* 4 */
+    five             = Dec64(5);         	/* 5 */
+    six              = Dec64(6);          	/* 6 */
+    seven            = Dec64(7);        	/* 7 */
+    eight            = Dec64(8);        	/* 8 */
+    nine             = Dec64(9);         	/* 9 */
+    ten              = Dec64(10);         	/* 10 */
+    minnum           = Dec64(1, -127);    	/* the smallest possible number */
+    epsilon          = Dec64(1, -16);    	/* the smallest number addable to 1 */
     negative_epsilon = Dec64(-1, -16);
 
     cent       = Dec64(1, -2);        					/* 0.01 */
@@ -305,7 +305,7 @@ static void test_inc(Dec64 first, Dec64 expected, std::string comment) {
 }
 
 static void test_int(Dec64 first, Dec64 expected, std::string comment) {
-    Dec64 actual = first.to_int();
+    Dec64 actual = Dec64(first.to_int(),0,true);
     judge_unary(first, expected, actual, "int", "i", comment);
 }
 
@@ -320,12 +320,12 @@ static void test_is_any_nan(Dec64 first, Dec64 expected, std::string comment) {
 }
 
 static void test_is_integer(Dec64 first, Dec64 expected, std::string comment) {
-    Dec64 actual = first.is_integer();
+    Dec64 actual = first.is_integer() ? one : zero;
     judge_unary(first, expected, actual, "is_integer", "i", comment);
 }
 
 static void test_is_zero(Dec64 first, Dec64 expected, std::string comment) {
-    Dec64 actual = first == zero;
+    Dec64 actual = (first == zero) ? one : zero;
     judge_unary(first, expected, actual, "is_zero", "0", comment);
 }
 
@@ -381,10 +381,10 @@ static void test_subtract(Dec64 first, Dec64 second, Dec64 expected, std::string
 
 static void test_all_abs() {
     test_abs(dec64nan, dec64nan, "nan");
-    test_abs(nannan, dec64nan, "nannan");
+    test_abs(nannan,   dec64nan, "nannan");
     test_abs(zero, zero, "zero");
     test_abs(zip, zero, "zip");
-    test_abs(Dec64().set_val(100), zero, "zero alias");
+    test_abs(Dec64(100, 0, true), zero, "zero alias");
     test_abs(one, one, "one");
     test_abs(negative_one, one, "-1");
     test_abs(almost_negative_one, almost_one, "almost_negative_one");
@@ -512,7 +512,7 @@ static void test_all_dec() {
     test_dec(Dec64(9999999999999999, 0), Dec64(9999999999999998, 0), "9999999999999999");
     test_dec(Dec64(10000000000000000, 0), Dec64(9999999999999999, 0), "10000000000000000");
     test_dec(maxint_plus, maxint_plus, "maxint plus");
-    test_dec(maxint, maxint - 256, "maxint");
+    test_dec(maxint, maxint-1, "maxint");
     test_dec(one_over_maxint, negative_one, "1/maxint");
     test_dec(maxnum, maxnum, "maxnum");
     test_dec(googol, googol, "googol");
@@ -598,8 +598,8 @@ static void test_all_divide() {
     test_divide(Dec64(1000000000000000, -15), maxint, one_over_maxint, "one / maxint alias 15");
     test_divide(Dec64(10000000000000000, -16), maxint, one_over_maxint, "one / maxint alias 16");
     test_divide(minnum, two, minnum, "minnum / 2");
-    test_divide(one, Dec64().set_val(0x1437EEECD800000LL), Dec64(28114572543455208, -31), "1/17!");
-    test_divide(one, Dec64().set_val(0x52D09F700003LL), Dec64(28114572543455208, -31), "1/17!");
+    test_divide(one, Dec64(0x1437EEECD800000LL, 0, true), Dec64(28114572543455208, -31), "1/17!");
+    test_divide(one, Dec64(0x52D09F700003LL, 0, true), Dec64(28114572543455208, -31), "1/17!");
 }
 
 static void test_all_equal() {
@@ -623,7 +623,7 @@ static void test_all_equal() {
     test_equal(maxint, maxnum, zero, "maxint = maxnum");
     test_equal(negative_maxint, maxint, zero, "-maxint = maxint");
     test_equal(negative_maxint, negative_one, zero, "-maxint = -1");
-    test_equal(Dec64().set_val(0x1437EEECD800000LL), Dec64().set_val(0x52D09F700003LL), one, "17!");
+    test_equal(Dec64(0x1437EEECD800000LL, 0, true), Dec64(0x52D09F700003LL, 0, true), one, "17!");
 }
 
 static void test_all_floor() {
@@ -732,22 +732,22 @@ void test_all_int() {
     test_int(one, one, "one");
     test_floor(almost_one, zero, "almost_one");
     test_floor(almost_negative_one, negative_one, "almost_negative_one");
-    test_int(Dec64(1, 1), Dec64(10, 0), "10");
-    test_int(Dec64(1, 2), Dec64(100, 0), "100");
-    test_int(Dec64(1, 3), Dec64(1000, 0), "1000");
-    test_int(Dec64(1, 4), Dec64(10000, 0), "10000");
-    test_int(Dec64(1, 5), Dec64(100000, 0), "100000");
-    test_int(Dec64(1, 6), Dec64(1000000, 0), "1000000");
-    test_int(Dec64(1, 7), Dec64(10000000, 0), "10000000");
-    test_int(Dec64(1, 8), Dec64(100000000, 0), "100000000");
-    test_int(Dec64(1, 9), Dec64(1000000000, 0), "1000000000");
-    test_int(Dec64(1, 10), Dec64(10000000000, 0), "100000000000");
-    test_int(Dec64(1, 11), Dec64(100000000000, 0), "1000000000000");
-    test_int(Dec64(1, 12), Dec64(1000000000000, 0), "10000000000000");
-    test_int(Dec64(1, 13), Dec64(10000000000000, 0), "100000000000000");
-    test_int(Dec64(1, 14), Dec64(100000000000000, 0), "1000000000000000");
-    test_int(Dec64(1, 15), Dec64(1000000000000000, 0), "10000000000000000");
-    test_int(Dec64(1, 16), Dec64(10000000000000000, 0), "100000000000000000");
+    test_int(Dec64(1,  1), Dec64(               10), "10");
+    test_int(Dec64(1,  2), Dec64(              100), "100");
+    test_int(Dec64(1,  3), Dec64(             1000), "1000");
+    test_int(Dec64(1,  4), Dec64(            10000), "10000");
+    test_int(Dec64(1,  5), Dec64(           100000), "100000");
+    test_int(Dec64(1,  6), Dec64(          1000000), "1000000");
+    test_int(Dec64(1,  7), Dec64(         10000000), "10000000");
+    test_int(Dec64(1,  8), Dec64(        100000000), "100000000");
+    test_int(Dec64(1,  9), Dec64(       1000000000), "1000000000");
+    test_int(Dec64(1, 10), Dec64(      10000000000), "100000000000");
+    test_int(Dec64(1, 11), Dec64(     100000000000), "1000000000000");
+    test_int(Dec64(1, 12), Dec64(    1000000000000), "10000000000000");
+    test_int(Dec64(1, 13), Dec64(   10000000000000), "100000000000000");
+    test_int(Dec64(1, 14), Dec64(  100000000000000), "1000000000000000");
+    test_int(Dec64(1, 15), Dec64( 1000000000000000), "10000000000000000");
+    test_int(Dec64(1, 16), Dec64(10000000000000000), "100000000000000000");
     test_int(Dec64(1, 17), dec64nan, "1000000000000000000");
     test_int(cent, 0, "cent");
     test_int(Dec64(10, -1), one, "one alias 1");
@@ -769,9 +769,9 @@ void test_all_int() {
     test_int(Dec64(-12500000000000000, -16), Dec64(-2, -0), "-1.25");
     test_int(maxint, maxint, "maxint");
     test_int(negative_maxint, negative_maxint, "negative_maxint");
-    test_int(maxint_plus, 36028797018963970 << 8, "maxint_plus");
+    test_int(maxint_plus, Dec64(36028797018963970 << 8, 0, true), "maxint_plus");
     test_int(maxnum, dec64nan, "maxnum");
-    test_int(Dec64(7205759403792793, 1), 72057594037927930 << 8, "7205759403792793e1");
+    test_int(Dec64(7205759403792793, 1), Dec64(72057594037927930 << 8, 0, true), "7205759403792793e1");
     test_int(Dec64(7205759403792794, 1), dec64nan, "7205759403792794e1");
 }
 
@@ -834,70 +834,70 @@ static void test_all_is_any_nan() {
 }
 
 static void test_all_is_integer() {
-    test_is_integer(dec64nan, zero, "nan");
-    test_is_integer(nannan, zero, "nannan");
-    test_is_integer(zero, one, "zero");
-    test_is_integer(zip, one, "zip");
-    test_is_integer(minnum, zero, "minnum");
-    test_is_integer(epsilon, zero, "epsilon");
-    test_is_integer(cent, zero, "cent");
-    test_is_integer(half, zero, "half");
-    test_is_integer(one, one, "one");
-    test_is_integer(negative_one, one, "negative_one");
-    test_is_integer(Dec64(10000000000000001, -16), zero, "1.0000000000000001");
-    test_is_integer(Dec64(-10000000000000001, -16), zero, "-1.0000000000000001");
-    test_is_integer(Dec64(20000000000000000, -16), one, "two");
-    test_is_integer(e, zero, "e");
-    test_is_integer(pi, zero, "pi");
-    test_is_integer(negative_pi, zero, "-pi");
-    test_is_integer(maxint, one, "maxint");
-    test_is_integer(maxnum, one, "maxnum");
-    test_is_integer(negative_maxint, one, "negative_maxint");
-    test_is_integer(Dec64(11111111111111111, -17), zero, "0.1...");
-    test_is_integer(Dec64(22222222222222222, -17), zero, "0.2...");
-    test_is_integer(Dec64(33333333333333333, -17), zero, "0.3...");
-    test_is_integer(Dec64(4444444444444444, -16), zero, "0.4...");
-    test_is_integer(Dec64(5555555555555556, -16), zero, "0.5...");
-    test_is_integer(Dec64(6666666666666667, -16), zero, "0.6...");
-    test_is_integer(Dec64(7777777777777778, -16), zero, "0.7...");
-    test_is_integer(Dec64(8888888888888889, -16), zero, "0.8...");
-    test_is_integer(Dec64(9999999999999999, -16), zero, "0.9...");
-    test_is_integer(Dec64(10000000000000000, -16), one, "1");
-    test_is_integer(Dec64(-12500000000000000, -16), zero, "-1.25");
-    test_is_integer(Dec64(-1500000000000000, -15), zero, "-1.5");
-    test_is_integer(Dec64(-1560000000000000, -15), zero, "-1.56");
-    test_is_integer(Dec64(-11111111111111111, -17), zero, "-0.1...");
-    test_is_integer(Dec64(-22222222222222222, -17), zero, "-0.2...");
-    test_is_integer(Dec64(-33333333333333333, -17), zero, "-0.3...");
-    test_is_integer(Dec64(-4444444444444444, -16), zero, "-0.4...");
-    test_is_integer(Dec64(-5555555555555556, -16), zero, "-0.5...");
-    test_is_integer(Dec64(-6666666666666667, -16), zero, "-0.6...");
-    test_is_integer(Dec64(-7777777777777778, -16), zero, "-0.7...");
-    test_is_integer(Dec64(-8888888888888889, -16), zero, "-0.8...");
-    test_is_integer(Dec64(-9999999999999999, -16), zero, "-0.9...");
-    test_is_integer(Dec64(-10000000000000000, -16), one, "-1.0...");
-    test_is_integer(Dec64(449, -2), zero, "4.49");
-    test_is_integer(Dec64(-449, -2), zero, "-4.49");
-    test_is_integer(Dec64(450, -2), zero, "4.50");
-    test_is_integer(Dec64(-450, -2), zero, "-4.50");
-    test_is_integer(Dec64(-400, -2), one, "-4.00");
-    test_is_integer(Dec64(-400, -3), zero, "-0.400");
-    test_is_integer(Dec64(-1, -127), zero, "-1e-127");
-    test_is_integer(Dec64(-1, -13), zero, "-1e-13");
-    test_is_integer(Dec64(1, -12), zero, "1e-12");
-    test_is_integer(Dec64(-1, -12), zero, "-1e-12");
-    test_is_integer(Dec64(-1, -11), zero, "-1e-11");
-    test_is_integer(Dec64(-11, -11), zero, "-11e-11");
-    test_is_integer(Dec64(-111, -11), zero, "-111e-11");
-    test_is_integer(Dec64(-22, -11), zero, "-22e-11");
-    test_is_integer(Dec64(-1, -1), zero, "-1e-1");
-    test_is_integer(Dec64(-10, -3), zero, "-10e-3");
-    test_is_integer(Dec64(9, -1), zero, "0.9");
-    test_is_integer(Dec64(-9, -1), zero, "-0.9");
-    test_is_integer(almost_one, zero, "almost_one");
-    test_is_integer(almost_negative_one, zero, "almost_negative_one");
-    test_is_integer(Dec64(-999999999999999, -15), zero, "-0.9...");
-    test_is_integer(Dec64(-9999999999999998, -16), zero, "-0.9...8");
+    test_is_integer(                       dec64nan, zero, "nan");
+    test_is_integer(                         nannan, zero, "nannan");
+    test_is_integer(                           zero,  one, "zero");
+    test_is_integer(                            zip,  one, "zip");
+    test_is_integer(                         minnum, zero, "minnum");
+    test_is_integer(                        epsilon, zero, "epsilon");
+    test_is_integer(                           cent, zero, "cent");
+    test_is_integer(                           half, zero, "half");
+    test_is_integer(                            one,  one, "one");
+    test_is_integer(                   negative_one,  one, "negative_one");
+    test_is_integer(Dec64( 10000000000000001,  -16), zero, "1.0000000000000001");
+    test_is_integer(Dec64(-10000000000000001,  -16), zero, "-1.0000000000000001");
+    test_is_integer(Dec64( 20000000000000000,  -16),  one, "two");
+    test_is_integer(                              e, zero, "e");
+    test_is_integer(                             pi, zero, "pi");
+    test_is_integer(                    negative_pi, zero, "-pi");
+    test_is_integer(                         maxint,  one, "maxint");
+    test_is_integer(                         maxnum,  one, "maxnum");
+    test_is_integer(                negative_maxint,  one, "negative_maxint");
+    test_is_integer(Dec64( 11111111111111111,  -17), zero, "0.1...");
+    test_is_integer(Dec64( 22222222222222222,  -17), zero, "0.2...");
+    test_is_integer(Dec64( 33333333333333333,  -17), zero, "0.3...");
+    test_is_integer(Dec64(  4444444444444444,  -16), zero, "0.4...");
+    test_is_integer(Dec64(  5555555555555556,  -16), zero, "0.5...");
+    test_is_integer(Dec64(  6666666666666667,  -16), zero, "0.6...");
+    test_is_integer(Dec64(  7777777777777778,  -16), zero, "0.7...");
+    test_is_integer(Dec64(  8888888888888889,  -16), zero, "0.8...");
+    test_is_integer(Dec64(  9999999999999999,  -16), zero, "0.9...");
+    test_is_integer(Dec64( 10000000000000000,  -16),  one, "1");
+    test_is_integer(Dec64(-12500000000000000,  -16), zero, "-1.25");
+    test_is_integer(Dec64( -1500000000000000,  -15), zero, "-1.5");
+    test_is_integer(Dec64( -1560000000000000,  -15), zero, "-1.56");
+    test_is_integer(Dec64(-11111111111111111,  -17), zero, "-0.1...");
+    test_is_integer(Dec64(-22222222222222222,  -17), zero, "-0.2...");
+    test_is_integer(Dec64(-33333333333333333,  -17), zero, "-0.3...");
+    test_is_integer(Dec64( -4444444444444444,  -16), zero, "-0.4...");
+    test_is_integer(Dec64( -5555555555555556,  -16), zero, "-0.5...");
+    test_is_integer(Dec64( -6666666666666667,  -16), zero, "-0.6...");
+    test_is_integer(Dec64( -7777777777777778,  -16), zero, "-0.7...");
+    test_is_integer(Dec64( -8888888888888889,  -16), zero, "-0.8...");
+    test_is_integer(Dec64( -9999999999999999,  -16), zero, "-0.9...");
+    test_is_integer(Dec64(-10000000000000000,  -16),  one, "-1.0...");
+    test_is_integer(Dec64(               449,   -2), zero, "4.49");
+    test_is_integer(Dec64(              -449,   -2), zero, "-4.49");
+    test_is_integer(Dec64(               450,   -2), zero, "4.50");
+    test_is_integer(Dec64(              -450,   -2), zero, "-4.50");
+    test_is_integer(Dec64(              -400,   -2),  one, "-4.00");
+    test_is_integer(Dec64(              -400,   -3), zero, "-0.400");
+    test_is_integer(Dec64(                -1, -127), zero, "-1e-127");
+    test_is_integer(Dec64(                -1,  -13), zero, "-1e-13");
+    test_is_integer(Dec64(                 1,  -12), zero, "1e-12");
+    test_is_integer(Dec64(                -1,  -12), zero, "-1e-12");
+    test_is_integer(Dec64(                -1,  -11), zero, "-1e-11");
+    test_is_integer(Dec64(               -11,  -11), zero, "-11e-11");
+    test_is_integer(Dec64(              -111,  -11), zero, "-111e-11");
+    test_is_integer(Dec64(               -22,  -11), zero, "-22e-11");
+    test_is_integer(Dec64(                -1,   -1), zero, "-1e-1");
+    test_is_integer(Dec64(               -10,   -3), zero, "-10e-3");
+    test_is_integer(Dec64(                 9,   -1), zero, "0.9");
+    test_is_integer(Dec64(                -9,   -1), zero, "-0.9");
+    test_is_integer(                     almost_one, zero, "almost_one");
+    test_is_integer(            almost_negative_one, zero, "almost_negative_one");
+    test_is_integer(Dec64(  -999999999999999,  -15), zero, "-0.9...");
+    test_is_integer(Dec64( -9999999999999998,  -16), zero, "-0.9...8");
 }
 
 static void test_all_is_zero() {
@@ -1047,7 +1047,7 @@ static void test_all_multiply() {
 static void test_all_neg() {
     test_neg(dec64nan, dec64nan, "nan");
     test_neg(nannan, dec64nan, "nannan");
-    test_neg(100, zero, "zero alias");
+    test_neg(Dec64(100, 0, true), zero, "zero alias");
     test_neg(zero, zero, "zero");
     test_neg(zip, zero, "zip");
     test_neg(one, negative_one, "one");
@@ -1059,102 +1059,102 @@ static void test_all_neg() {
 }
 
 static void test_all_new() {
-    test_new(0, 0, zero, "zero");
-    test_new(0, 1000, zero, "0e1000");
-    test_new(0, -1000, zero, "0e-1000");
-    test_new(1, 0, (1 << 8), "one");
-    test_new(1, 1000, dec64nan, "0e1000");
-    test_new(1, -1000, zero, "0e-1000");
-    test_new(-1, 127, (-1 << 8) + 127, "-1e127");
-    test_new(-1, 128, (-10 << 8) + 127, "-1e128");
-    test_new(1, -128, zero, "1e-128");
-    test_new(-1, 143, (-10000000000000000LL << 8) + 127, "-1e143");
-    test_new(-1, 144, dec64nan, "-1e144");
-    test_new(10, -128, minnum, "10e-128");
-    test_new(100, -129, minnum, "100e-129");
-    test_new(10000000000000001, -16, (10000000000000001 << 8) + (0xff & -16), "10000000000000001, -16");
-    test_new(36028797018963967, 0, (36028797018963967 << 8), "3602879701896397e0");
-    test_new(-36028797018963967, 0, -36028797018963967 << 8, "-3602879701896397e0");
-    test_new(36028797018963967, -128, (3602879701896397 << 8) + (0xff & -127), "36028797018963967e-128");
-    test_new(36028797018963967, -129, (360287970189640 << 8) + (0xff & -127), "36028797018963967e-129");
-    test_new(36028797018963967, -130, (36028797018964 << 8) + (0xff & -127), "36028797018963967e-130");
-    test_new(36028797018963967, -131, (3602879701896 << 8) + (0xff & -127), "36028797018963967e-131");
-    test_new(36028797018963967, -132, (360287970190 << 8) + (0xff & -127), "36028797018963967e-132");
-    test_new(36028797018963967, -133, (36028797019 << 8) + (0xff & -127), "36028797018963967e-133");
-    test_new(36028797018963967, -134, (3602879702LL << 8) + (0xff & -127), "36028797018963967e-134");
-    test_new(36028797018963967, -135, (360287970LL << 8) + (0xff & -127), "36028797018963967e-135");
-    test_new(36028797018963967, -136, (36028797LL << 8) + (0xff & -127), "36028797018963967e-136");
-    test_new(36028797018963967, -137, (3602880LL << 8) + (0xff & -127), "36028797018963967e-137");
-    test_new(36028797018963967, -138, (360288LL << 8) + (0xff & -127), "36028797018963967e-138");
-    test_new(36028797018963967, -139, (36029LL << 8) + (0xff & -127), "36028797018963967e-139");
-    test_new(36028797018963967, -140, (3603LL << 8) + (0xff & -127), "36028797018963967e-140");
-    test_new(36028797018963967, -141, (360LL << 8) + (0xff & -127), "36028797018963967e-141");
-    test_new(36028797018963967, -142, (36LL << 8) + (0xff & -127), "36028797018963967e-142");
-    test_new(36028797018963967, -143, (4LL << 8) + (0xff & -127), "36028797018963967e-143");
-    test_new(36028797018963967, -144, zero, "36028797018963967e-144");
-    test_new(360287970189639670, 0, (36028797018963967 << 8) + 1, "36028797018963970e0");
-    test_new(-360287970189639670, 0, (-36028797018963967 << 8) + 1, "-36028797018963970e0");
-    test_new(3602879701896396700, 0, (36028797018963967 << 8) + 2, "3602879701896396700e0");
-    test_new(-3602879701896396700, 0, (-36028797018963967 << 8) + 2, "-3602879701896396700e0");
-    test_new(3602879701896396701, 0, (36028797018963967 << 8) + 2, "3602879701896396701e0");
-    test_new(-3602879701896396701, 0, (-36028797018963967 << 8) + 2, "-3602879701896396701e0");
-    test_new(360287970189639674, 0, (36028797018963967 << 8) + 1, "36028797018963974e0");
-    test_new(-360287970189639674, 0, (-36028797018963967 << 8) + 1, "-36028797018963974e0");
-    test_new(3602879701896396740, 0, (36028797018963967 << 8) + 2, "3602879701896396740e0");
-    test_new(-3602879701896396740, 0, (-36028797018963967 << 8) + 2, "-3602879701896396740e0");
-    test_new(3602879701896396749, 0, (36028797018963967 << 8) + 2, "3602879701896396749e0");
-    test_new(-3602879701896396749, 0, (-36028797018963967 << 8) + 2, "-3602879701896396749e0");
-    test_new(-360287970189639675, 0, (-36028797018963968 << 8) + 1, "-36028797018963975e0");
-    test_new(360287970189639675, 0, (3602879701896397 << 8) + 2, "36028797018963975e0");
-    test_new(-3602879701896396750, 0, (-36028797018963968 << 8) + 2, "-3602879701896396750e0");
-    test_new(3602879701896396750, 0, (3602879701896397 << 8) + 3, "3602879701896396750e0");
-    test_new(-36028797018963968, 0, (-36028797018963968 << 8), "-3602879701896398e0");
-    test_new(-36028797018963968, -147, zero, "-36028797018963968e-147");
-    test_new(-3602879701896396800, 0, (-36028797018963968 << 8) + 2, "-3602879701896396800e0");
-    test_new(3602879701896396800, 0, (3602879701896397 << 8) + 3, "3602879701896396800e0");
-    test_new(4611686018427387903, 0, (4611686018427388 << 8) + 3, "4611686018427387903");
-    test_new(-4611686018427387903, 0, (-4611686018427388 << 8) + 3, "-4611686018427387903");
-    test_new(9223372036854775499, 0, (9223372036854775 << 8) + 3, "9223372036854775499");
-    test_new(-9223372036854775499, 0, (-9223372036854775 << 8) + 3, "-9223372036854775499");
-    test_new(3689348814741910499, 0, (3689348814741910 << 8) + 3, "3689348814741910499");
-    test_new(-3689348814741910499, 0, (-3689348814741910 << 8) + 3, "-3689348814741910499");
-    test_new(-368934881474191049, 0, (-368934881474191 << 8) + 3, "-368934881474191049");
-    test_new(-36893488147419104, 0, (-3689348814741910 << 8) + 1, "-36893488147419104");
-    test_new(49, -129, zero, "49e-129");
-    test_new(50, -129, minnum, "50e-129");
-    test_new(-444444444444444444, 0, (-4444444444444444 << 8) + 2, "-444444444444444444");
-    test_new(-4444444444444444444, 0, (-4444444444444444 << 8) + 3, "-4444444444444444444");
-    test_new(500000000000, -139, minnum, "500000000000e-139");
-    test_new(-500000000000, -139, negative_minnum, "-500000000000e-139");
-    test_new(5000000000000000000, -145, (5 << 8) + (0x81), "5000000000000000000e-145");
-    test_new(-5000000000000000000, -146, negative_minnum, "-5000000000000000000e-146");
-    test_new(-5555555555555555, 0, (-5555555555555555 << 8) + 0, "-55555555555555555");
-    test_new(-55555555555555555, 0, (-5555555555555556 << 8) + 1, "-55555555555555555");
-    test_new(-555555555555555555, 0, (-5555555555555556 << 8) + 2, "-555555555555555555");
-    test_new(-5555555555555555555, 0, (-5555555555555556 << 8) + 3, "-5555555555555555555");
-    test_new(-5555555555555554, 0, (-5555555555555554 << 8) + 0, "-55555555555555555");
-    test_new(-55555555555555554, 0, (-5555555555555555 << 8) + 1, "-55555555555555555");
-    test_new(576460752303423487, 0, (5764607523034235 << 8) + 2, "1152921504606846975");
-    test_new(-576460752303423487, 0, (-5764607523034235 << 8) + 2, "-1152921504606846975");
-    test_new(72057594037927935, 0, (7205759403792794 << 8) + 1, "72057594037927935");
-    test_new(-72057594037927935, 0, (-7205759403792794 << 8) + 1, "-72057594037927935");
-    test_new(9223372036854775807, 0, (9223372036854776 << 8) + 3, "9223372036854775807");
-    test_new(-9223372036854775807, 0, (-9223372036854776 << 8) + 3, "-9223372036854775807");
-    test_new(-9223372036854775807, 124, (-9223372036854776 << 8) + 127, "-9223372036854775807e124");
-    test_new(-9223372036854775807, 125, dec64nan, "-9223372036854775807e125");
-    test_new(-9223372036854775807, -132, (-92233720368548 << 8) + (0x81), "-9223372036854775807e-132");
-    test_new(-9223372036854775807, -133, (-9223372036855 << 8) + (0x81), "-9223372036854775807e-133");
-    test_new(9223372036854775807, -143, (922LL << 8) + (0xff & -127), "9223372036854775807e-143");
-    test_new(9223372036854775807, -144, (92LL << 8) + (0xff & -127), "9223372036854775807e-144");
-    test_new(-9223372036854775807, -145, (-9 << 8) + (0x81), "-9223372036854775807e-145");
-    test_new(9223372036854775807, -145, (9LL << 8) + (0xff & -127), "9223372036854775807e-145");
-    test_new(-9223372036854775807, -146, (-1 << 8) + (0x81), "-9223372036854775807e-146");
-    test_new(9223372036854775807, -146, (1LL << 8) + (0xff & -127), "9223372036854775807e-146");
+    test_new(                   0,     0,                                                    zero,                    "zero");
+    test_new(                   0,  1000,                                                    zero,                  "0e1000");
+    test_new(                   0, -1000,                                                    zero,                 "0e-1000");
+    test_new(                   1,     0,                                Dec64((1 << 8), 0, true),                     "one");
+    test_new(                   1,  1000,                                                dec64nan,                  "0e1000");
+    test_new(                   1, -1000,                                                    zero,                 "0e-1000");
+    test_new(                  -1,   127,                        Dec64( (-1 << 8) + 127, 0, true),                  "-1e127");
+    test_new(                  -1,   128,                        Dec64((-10 << 8) + 127, 0, true),                  "-1e128");
+    test_new(                   1,  -128,                                                    zero,                  "1e-128");
+    test_new(                  -1,   143,       Dec64((-10000000000000000LL << 8) + 127, 0, true),                  "-1e143");
+    test_new(                  -1,   144,                                                dec64nan,                  "-1e144");
+    test_new(                  10,  -128,                                                  minnum,                 "10e-128");
+    test_new(                 100,  -129,                                                  minnum,                "100e-129");
+    test_new(   10000000000000001,   -16, Dec64((10000000000000001 << 8) + (0xff & -16), 0, true),  "10000000000000001, -16");
+    test_new(   36028797018963967,     0, Dec64((36028797018963967 << 8),                0, true),      "3602879701896397e0");
+    test_new(  -36028797018963967,     0, Dec64(-36028797018963967 << 8,                 0, true),     "-3602879701896397e0");
+    test_new(   36028797018963967,  -128, Dec64((3602879701896397 << 8) + (0xff & -127), 0, true),  "36028797018963967e-128");
+    test_new(   36028797018963967,  -129, Dec64((360287970189640 << 8) + (0xff & -127),  0, true),  "36028797018963967e-129");
+    test_new(   36028797018963967,  -130, Dec64((36028797018964 << 8) + (0xff & -127),   0, true),  "36028797018963967e-130");
+    test_new(   36028797018963967,  -131, Dec64((3602879701896 << 8) + (0xff & -127),    0, true),  "36028797018963967e-131");
+    test_new(   36028797018963967,  -132, Dec64((360287970190 << 8) + (0xff & -127),     0, true),  "36028797018963967e-132");
+    test_new(   36028797018963967,  -133, Dec64((36028797019 << 8) + (0xff & -127),      0, true),  "36028797018963967e-133");
+    test_new(   36028797018963967,  -134, Dec64((3602879702LL << 8) + (0xff & -127),     0, true),  "36028797018963967e-134");
+    test_new(   36028797018963967,  -135, Dec64((360287970LL << 8) + (0xff & -127),      0, true),  "36028797018963967e-135");
+    test_new(   36028797018963967,  -136, Dec64((36028797LL << 8) + (0xff & -127),       0, true),  "36028797018963967e-136");
+    test_new(   36028797018963967,  -137, Dec64((3602880LL << 8) + (0xff & -127),        0, true),  "36028797018963967e-137");
+    test_new(   36028797018963967,  -138, Dec64((360288LL << 8) + (0xff & -127),         0, true),  "36028797018963967e-138");
+    test_new(   36028797018963967,  -139, Dec64((36029LL << 8) + (0xff & -127),          0, true),  "36028797018963967e-139");
+    test_new(   36028797018963967,  -140, Dec64((3603LL << 8) + (0xff & -127),           0, true),  "36028797018963967e-140");
+    test_new(   36028797018963967,  -141, Dec64((360LL << 8) + (0xff & -127),            0, true),  "36028797018963967e-141");
+    test_new(   36028797018963967,  -142, Dec64((36LL << 8) + (0xff & -127),             0, true),  "36028797018963967e-142");
+    test_new(   36028797018963967,  -143, Dec64((4LL << 8) + (0xff & -127),              0, true),  "36028797018963967e-143");
+    test_new(   36028797018963967,  -144,                                                    zero,  "36028797018963967e-144");
+    test_new(  360287970189639670,     0,          Dec64((36028797018963967 << 8) + 1,   0, true),     "36028797018963970e0");
+    test_new( -360287970189639670,     0,          Dec64((-36028797018963967 << 8) + 1,  0, true),    "-36028797018963970e0");
+    test_new( 3602879701896396700,     0,          Dec64((36028797018963967 << 8) + 2,   0, true),   "3602879701896396700e0");
+    test_new(-3602879701896396700,     0,          Dec64((-36028797018963967 << 8) + 2,  0, true),  "-3602879701896396700e0");
+    test_new( 3602879701896396701,     0,          Dec64((36028797018963967 << 8) + 2,   0, true),   "3602879701896396701e0");
+    test_new(-3602879701896396701,     0,          Dec64((-36028797018963967 << 8) + 2,  0, true),  "-3602879701896396701e0");
+    test_new(  360287970189639674,     0,          Dec64((36028797018963967 << 8) + 1,   0, true),     "36028797018963974e0");
+    test_new( -360287970189639674,     0,          Dec64((-36028797018963967 << 8) + 1,  0, true),    "-36028797018963974e0");
+    test_new( 3602879701896396740,     0,          Dec64((36028797018963967 << 8) + 2,   0, true),   "3602879701896396740e0");
+    test_new(-3602879701896396740,     0,          Dec64((-36028797018963967 << 8) + 2,  0, true),  "-3602879701896396740e0");
+    test_new( 3602879701896396749,     0,          Dec64((36028797018963967 << 8) + 2,   0, true),   "3602879701896396749e0");
+    test_new(-3602879701896396749,     0,          Dec64((-36028797018963967 << 8) + 2,  0, true),  "-3602879701896396749e0");
+    test_new( -360287970189639675,     0,          Dec64((-36028797018963968 << 8) + 1,  0, true),    "-36028797018963975e0");
+    test_new(  360287970189639675,     0,          Dec64((3602879701896397 << 8) + 2,    0, true),     "36028797018963975e0");
+    test_new(-3602879701896396750,     0,          Dec64((-36028797018963968 << 8) + 2,  0, true),  "-3602879701896396750e0");
+    test_new( 3602879701896396750,     0,          Dec64((3602879701896397 << 8) + 3,    0, true),   "3602879701896396750e0");
+    test_new(  -36028797018963968,     0,          Dec64((-36028797018963968 << 8),      0, true),     "-3602879701896398e0");
+    test_new(  -36028797018963968,  -147,                                                    zero, "-36028797018963968e-147");
+    test_new(-3602879701896396800,     0,          Dec64((-36028797018963968 << 8) + 2,  0, true),     "-3602879701896396800e0");
+    test_new( 3602879701896396800,     0,          Dec64((3602879701896397 << 8) + 3,    0, true),      "3602879701896396800e0");
+    test_new( 4611686018427387903,     0,          Dec64((4611686018427388 << 8) + 3,    0, true),        "4611686018427387903");
+    test_new(-4611686018427387903,     0,          Dec64((-4611686018427388 << 8) + 3,   0, true),       "-4611686018427387903");
+    test_new( 9223372036854775499,     0,          Dec64((9223372036854775 << 8) + 3,    0, true),        "9223372036854775499");
+    test_new(-9223372036854775499,     0,          Dec64((-9223372036854775 << 8) + 3,   0, true),       "-9223372036854775499");
+    test_new( 3689348814741910499,     0,          Dec64((3689348814741910 << 8) + 3,    0, true),        "3689348814741910499");
+    test_new(-3689348814741910499,     0,          Dec64((-3689348814741910 << 8) + 3,   0, true),       "-3689348814741910499");
+    test_new( -368934881474191049,     0,          Dec64((-368934881474191 << 8) + 3,    0, true),        "-368934881474191049");
+    test_new(  -36893488147419104,     0,          Dec64((-3689348814741910 << 8) + 1,   0, true),         "-36893488147419104");
+    test_new(                  49,  -129,                                                    zero,                    "49e-129");
+    test_new(                  50,  -129,                                                  minnum,                    "50e-129");
+    test_new( -444444444444444444,     0,           Dec64((-4444444444444444 << 8) + 2,  0, true),        "-444444444444444444");
+    test_new(-4444444444444444444,     0,           Dec64((-4444444444444444 << 8) + 3,  0, true),       "-4444444444444444444");
+    test_new(        500000000000,  -139,                                                  minnum,          "500000000000e-139");
+    test_new(       -500000000000,  -139,                                         negative_minnum,         "-500000000000e-139");
+    test_new( 5000000000000000000,  -145,                      Dec64((5 << 8) + (0x81),  0, true),   "5000000000000000000e-145");
+    test_new(-5000000000000000000,  -146,                                         negative_minnum,  "-5000000000000000000e-146");
+    test_new(   -5555555555555555,     0,        Dec64((-5555555555555555 << 8) + 0,     0, true),         "-55555555555555555");
+    test_new(  -55555555555555555,     0,        Dec64((-5555555555555556 << 8) + 1,     0, true),         "-55555555555555555");
+    test_new( -555555555555555555,     0,        Dec64((-5555555555555556 << 8) + 2,     0, true),        "-555555555555555555");
+    test_new(-5555555555555555555,     0,        Dec64((-5555555555555556 << 8) + 3,     0, true),       "-5555555555555555555");
+    test_new(   -5555555555555554,     0,        Dec64((-5555555555555554 << 8) + 0,     0, true),         "-55555555555555555");
+    test_new(  -55555555555555554,     0,        Dec64((-5555555555555555 << 8) + 1,     0, true),         "-55555555555555555");
+    test_new(  576460752303423487,     0,        Dec64((5764607523034235 << 8) + 2,      0, true),        "1152921504606846975");
+    test_new( -576460752303423487,     0,        Dec64((-5764607523034235 << 8) + 2,     0, true),       "-1152921504606846975");
+    test_new(   72057594037927935,     0,        Dec64((7205759403792794 << 8) + 1,      0, true),          "72057594037927935");
+    test_new(  -72057594037927935,     0,        Dec64((-7205759403792794 << 8) + 1,     0, true),         "-72057594037927935");
+    test_new( 9223372036854775807,     0,        Dec64((9223372036854776 << 8) + 3,      0, true),        "9223372036854775807");
+    test_new(-9223372036854775807,     0,        Dec64((-9223372036854776 << 8) + 3,     0, true),       "-9223372036854775807");
+    test_new(-9223372036854775807,   124,        Dec64((-9223372036854776 << 8) + 127,   0, true),   "-9223372036854775807e124");
+    test_new(-9223372036854775807,   125,                                                dec64nan,   "-9223372036854775807e125");
+    test_new(-9223372036854775807,  -132,        Dec64((-92233720368548 << 8) + (0x81),  0, true),  "-9223372036854775807e-132");
+    test_new(-9223372036854775807,  -133,        Dec64((-9223372036855 << 8) + (0x81),   0, true),  "-9223372036854775807e-133");
+    test_new( 9223372036854775807,  -143,        Dec64((922LL << 8) + (0xff & -127),     0, true),   "9223372036854775807e-143");
+    test_new( 9223372036854775807,  -144,        Dec64((92LL << 8) + (0xff & -127),      0, true),   "9223372036854775807e-144");
+    test_new(-9223372036854775807,  -145,        Dec64((-9 << 8) + (0x81),               0, true),  "-9223372036854775807e-145");
+    test_new( 9223372036854775807,  -145,        Dec64((9LL << 8) + (0xff & -127),       0, true),   "9223372036854775807e-145");
+    test_new(-9223372036854775807,  -146,        Dec64((-1 << 8) + (0x81),               0, true),  "-9223372036854775807e-146");
+    test_new( 9223372036854775807,  -146,        Dec64((1LL << 8) + (0xff & -127),       0, true),   "9223372036854775807e-146");
 }
 
 void test_all_normal() {
     test_normal(dec64nan, dec64nan, "nan");
-    test_normal(nannan, dec64nan, "nannan");
+    test_normal(nannan  , dec64nan, "nannan");
     test_normal(zero, zero, "zero");
     test_normal(zip, zero, "zip");
     test_normal(epsilon, epsilon, "epsilon");

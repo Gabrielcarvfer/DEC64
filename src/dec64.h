@@ -63,7 +63,8 @@ extern dec64 dec64_subtract(dec64 minuend, dec64 subtrahend)   /* difference */;
 
 class Dec64{
     public:
-        Dec64(int64 coefficient=0, int64 exponent=0);
+        Dec64(int64 coefficient = 0, int64 exponent=0, bool copy=false);
+
         ~Dec64();
 
         Dec64 coefficient();
@@ -95,7 +96,8 @@ class Dec64{
         Dec64 operator*(const Dec64& a);
         Dec64 operator/(const Dec64& a);
         Dec64 operator%(const Dec64& a);
-        bool  operator<(const Dec64& a);
+        //bool  operator<(const Dec64& a);
+        Dec64 operator<(const Dec64 &a);
         bool  operator>(const Dec64& a);
         bool  operator==(const Dec64& a);
         bool  operator!=(const Dec64& a);

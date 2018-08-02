@@ -1,9 +1,13 @@
 #include <dec64.h>
 
 
-Dec64::Dec64(int64 coefficient, int64 exponent) {
-    this->value = dec64_new(coefficient, exponent);
+Dec64::Dec64(int64 coefficient, int64 exponent,  bool copy) {
+    //Copy coefficient into value if copying a value already in Dec64 format
+    // or use the coefficient and exponent to create a new number
+    // (by default, create a Dec64 integer if neither exponent or copy are modified)
+    this->value = !copy ? dec64_new(coefficient, exponent) : coefficient ;
 }
+
 
 
 Dec64::~Dec64() = default;
@@ -53,12 +57,16 @@ Dec64 Dec64::operator%(const Dec64 &a) {
 
 Dec64 Dec64::operator!() {
     Dec64 res;
-    res.value = dec64_neg(this->value);
+    res.value = dec64_not(this->value);
     return res;
 }
 
-bool Dec64::operator<(const Dec64 &a) {
+/*bool Dec64::operator<(const Dec64 &a) {
     return dec64_less(this->value, a.value) == DEC64_ONE;
+}*/
+
+Dec64 Dec64::operator<(const Dec64 &a) {
+    return Dec64(dec64_less(this->value, a.value),0,true);
 }
 
 bool Dec64::operator>(const Dec64 &a) {
@@ -78,7 +86,7 @@ bool Dec64::operator>=(const Dec64 &a) {
 }
 
 bool Dec64::operator<=(const Dec64 &a) {
-    return *this<a || *this==a;
+    return  *this==a;// *this<a ||
 }
 
 Dec64 Dec64::coefficient() {
@@ -160,12 +168,12 @@ bool Dec64::is_zero()
 
 bool Dec64::is_nan()
 {
-    return dec64_is_zero(this->value) == DEC64_ONE;
+    return dec64_is_any_nan(this->value) == DEC64_ONE;
 }
 
 bool Dec64::is_integer()
 {
-    return dec64_is_integer(this->value) == 1;
+    return dec64_is_integer(this->value) == DEC64_ONE;
 }
 
 Dec64 Dec64::signum()

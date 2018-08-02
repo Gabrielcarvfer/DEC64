@@ -76,6 +76,6 @@ target_link_libraries(dec64_math_test dec64)
 add_executable(dec64_string_test ./test/dec64_string_test.c)
 target_link_libraries(dec64_string_test dec64)
 
-add_executable(dec64_cpp_test ./test/dec64_cpp_test.cpp)
+add_executable(dec64_cpp_test test/dec64_test.cpp)
 target_link_libraries(dec64_cpp_test dec64)
 
