@@ -351,12 +351,6 @@ pack:
     cmp     r8,127          ; compare exponent with 127
     jg      pack_decrease   ; it might be possible to decrease it
 
-; %if the exponent is smaller than -127, then the number is too small.
-; But it might still be possible to salvage a value.
-
-    cmp     r9,-127
-    jl      pack_decrease_small
-
 ; %if the exponent is too small, or %if the coefficient is too large, then some
 ; division is necessary. The absolute value of the coefficient is off by one
 ; for the negative because
@@ -439,32 +433,6 @@ pack_decrease:
     sar     r9,56           ; r9 is top 8 bits of the coefficient
     adc     r9,0            ; add the ninth bit
     jnz     return_nan      ; the number is still too large
-    shl     r0,8            ; sh%ift the exponent into position
-    cmovz   r8,r0           ; %if the coefficient is zero, also zero the exponent
-    movzx   r8,r8_b         ; zero out all but the bottom 8 bits of the exponent
-    or      r0,r8           ; mix in the exponent
-    ret
-
-    pad; -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
-
-pack_decrease_small:
-
-; The exponent is too small. We can attempt to reduce it by scaling up.
-; This can salvage values in a small set of cases.
-
-    mov     r10, 10
-    sub     r10, r0
-    jb      return_zero     ; %if less than 10, will underflow (nan?)
-    mov     r10, 10         ; if not, try to salvage
-    cqo
-    idiv    r10             ; try dividing the coefficient by 10
-    add     r8,1            ; decrement the exponent
-    test    r8,-128         ; is the exponent still under -127?
-    jnz     pack_decrease_small   ; until the exponent is less than -127
-    mov     r9,r0           ; r9 is the coefficient
-    sar     r9,56           ; r9 is top 8 bits of the coefficient
-    adc     r9,0            ; add the ninth bit
-    jnz     return_zero     ; the number is still too small
     shl     r0,8            ; sh%ift the exponent into position
     cmovz   r8,r0           ; %if the coefficient is zero, also zero the exponent
     movzx   r8,r8_b         ; zero out all but the bottom 8 bits of the exponent

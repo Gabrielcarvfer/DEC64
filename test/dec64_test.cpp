@@ -1064,7 +1064,7 @@ static void test_all_new() {
     test_new(                   0, -1000,                                                    zero,                 "0e-1000");
     test_new(                   1,     0,                                Dec64((1 << 8), 0, true),                     "one");
     test_new(                   1,  1000,                                                dec64nan,                  "0e1000");
-    test_new(                   1, -1000,                                                    zero,                 "0e-1000");
+    test_new(                   1, -1000,                                                    zero,                 "1e-1000");
     test_new(                  -1,   127,                        Dec64( (-1 << 8) + 127, 0, true),                  "-1e127");
     test_new(                  -1,   128,                        Dec64((-10 << 8) + 127, 0, true),                  "-1e128");
     test_new(                   1,  -128,                                                    zero,                  "1e-128");
@@ -1403,6 +1403,7 @@ static void test_print(Dec64 first, std::string expected)
     else
     {
         nr_fail += 1;
+        std::cout<<"FAIL: Expected: "<<expected<<" Got:"<<ss.str()<<std::endl;
     }
 
 }
@@ -1410,17 +1411,32 @@ static void test_print(Dec64 first, std::string expected)
 static void test_new_from_string(std::string first, Dec64 expected, std::string comment)
 {
     Dec64 actual(first);
-    judge_unary(first, expected, actual, "not", "!", comment);
+    judge_unary(first, expected, actual, "new from string", "!", comment);
 }
 
 static void test_all_print()
 {
-    test_print(Dec64(100), "100");
+    test_print(Dec64(100,    0),    "100");
+    test_print(Dec64(100,    1),  "100e1");
+    test_print(Dec64(100,   -1), "100e-1");
+    test_print(Dec64(  0, -128),      "0");
+    test_print(Dec64(  0,    0),      "0");
+    test_print(Dec64(  0,  127),      "0");
+    test_print(        dec64nan,    "nan");
+
 }
 
 static void test_all_new_from_string()
 {
-    test_new_from_string("100", Dec64(100), "100");
+    test_new_from_string(     "100", Dec64(      100,    0),     "100");
+    test_new_from_string(   "100.0", Dec64(      100,    0),   "100.0");
+    test_new_from_string(     "1e3", Dec64(        1,    3),     "1e3");
+    test_new_from_string(    "-1e3", Dec64(       -1,    3),    "-1e3");
+    test_new_from_string(    "1e-3", Dec64(        1,   -3),    "1e-3");
+    test_new_from_string(  "1.25e0", Dec64(      125,   -2),  "125e-2");
+    test_new_from_string(  "25e0.5", Dec64( 79056942,   -6),  "25e0.5");
+    test_new_from_string( "25e-0.5", Dec64(  7905694,   -6), "25e-0.5");
+    test_new_from_string(     "nan",               dec64nan,     "nan");
 }
 
 
