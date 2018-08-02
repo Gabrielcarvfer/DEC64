@@ -1389,6 +1389,40 @@ static void test_all_subtract() {
     test_subtract(maxnum, maxnum, zero, "maxnum - maxnum");
     test_subtract(almost_negative_one, almost_negative_one, zero, "almost_negative_one - almost_negative_one");
 }
+#include <iostream>
+#include <string>
+#include <sstream>
+static void test_print(Dec64 first, std::string expected)
+{
+    std::stringstream ss;
+    ss << first;
+    if (ss.str() == expected)
+    {
+        nr_pass += 1;
+    }
+    else
+    {
+        nr_fail += 1;
+    }
+
+}
+
+static void test_new_from_string(std::string first, Dec64 expected, std::string comment)
+{
+    Dec64 actual(first);
+    judge_unary(first, expected, actual, "not", "!", comment);
+}
+
+static void test_all_print()
+{
+    test_print(Dec64(100), "100");
+}
+
+static void test_all_new_from_string()
+{
+    test_new_from_string("100", Dec64(100), "100");
+}
+
 
 static int do_tests(int level_of_detail) {
 /*
@@ -1426,6 +1460,8 @@ static int do_tests(int level_of_detail) {
     test_all_round();
     test_all_signum();
     test_all_subtract();
+    test_all_print();
+    test_all_new_from_string();
 
     printf("\n\n%i pass, %i fail.\n", nr_pass, nr_fail);
     return nr_fail;

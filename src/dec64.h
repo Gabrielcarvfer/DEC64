@@ -60,49 +60,55 @@ extern dec64 dec64_subtract(dec64 minuend, dec64 subtrahend)   /* difference */;
 
 #ifdef __cplusplus
 }
+#include <iostream>
 
 class Dec64{
     public:
-        Dec64(int64 coefficient = 0, int64 exponent=0, bool copy=false);
+        Dec64(const int64 coefficient = 0, const int64 exponent=0, const bool copy=false);
+        Dec64(std::string);
+
 
         ~Dec64();
 
-        Dec64 coefficient();
-        Dec64 exponent();
-        int64 coefficient_to_int();
-        int64 exponent_to_int();
-        Dec64 abs();
-        Dec64 ceil();
-        Dec64 floor();
-        Dec64 round(Dec64 places);
-        Dec64 half();
-        Dec64 set_val(dec64 val);
-        Dec64 neg();
-        int64 to_int();
-        Dec64 integer_divide(const Dec64 &a);
-        bool  is_zero();
-        bool  is_nan();
-        bool  is_integer();
-        Dec64 signum();
-        Dec64 normal();
+        Dec64 set_val(const dec64 val);
+        Dec64 coefficient() const ;
+        Dec64 exponent() const ;
+        int64 coefficient_to_int() const ;
+        int64 exponent_to_int() const ;
+        Dec64 abs() const ;
+        Dec64 ceil() const ;
+        Dec64 floor() const ;
+        Dec64 round(Dec64 places) const ;
+        Dec64 half() const ;
+        Dec64 neg() const ;
+        int64 to_int() const ;
+        Dec64 integer_divide(const Dec64 &a) const ;
+        bool  is_zero() const ;
+        bool  is_nan() const ;
+        bool  is_integer() const ;
+        Dec64 signum() const ;
+        Dec64 normal() const ;
 
 
 
-        Dec64 operator!();
-        Dec64 operator+(const Dec64& a);
-        Dec64 operator++();
-        Dec64 operator-(const Dec64& a);
-        Dec64 operator--();
-        Dec64 operator*(const Dec64& a);
-        Dec64 operator/(const Dec64& a);
-        Dec64 operator%(const Dec64& a);
-        //bool  operator<(const Dec64& a);
-        Dec64 operator<(const Dec64 &a);
-        bool  operator>(const Dec64& a);
-        bool  operator==(const Dec64& a);
-        bool  operator!=(const Dec64& a);
-        bool  operator<=(const Dec64& a);
-        bool  operator>=(const Dec64& a);
+        Dec64 operator!() const ;
+        Dec64 operator+(const Dec64& a) const ;
+        Dec64 operator++() const ;
+        Dec64 operator-(const Dec64& a) const ;
+        Dec64 operator--() const ;
+        Dec64 operator*(const Dec64& a) const ;
+        Dec64 operator/(const Dec64& a) const ;
+        Dec64 operator%(const Dec64& a) const ;
+        //bool  operator<(const Dec64& a) const ;
+        Dec64 operator<(const Dec64 &a) const ;
+        bool  operator>(const Dec64& a) const ;
+        bool  operator==(const Dec64& a) const ;
+        bool  operator!=(const Dec64& a) const ;
+        bool  operator<=(const Dec64& a) const ;
+        bool  operator>=(const Dec64& a) const ;
+
+        friend std::ostream& operator<<(std::ostream& os, const Dec64& a);
+
 
 
         dec64 value;
