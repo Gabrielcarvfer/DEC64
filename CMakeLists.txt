@@ -33,7 +33,7 @@ endif()
 
 #Add library
 add_library(dec64 STATIC
-                src/dec64.h
+                src/dec64.c
                 src/dec64.cpp
                 src/dec64_math.h
                 src/dec64_math.c
@@ -78,4 +78,3 @@ target_link_libraries(dec64_string_test dec64)
 
 add_executable(dec64_cpp_test test/dec64_test.cpp)
 target_link_libraries(dec64_cpp_test dec64)
-

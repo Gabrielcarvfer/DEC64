@@ -1,3 +1,7 @@
+//
+// Created by Gabriel Ferreira (@gabrielcarvfer) on 31-Jul-18.
+//
+
 #include <dec64.h>
 #include <cstring>
 #include <string>

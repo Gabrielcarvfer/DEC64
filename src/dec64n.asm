@@ -100,7 +100,7 @@ global dec64_add;(augend: dec64, addend: dec64)
 global dec64_ceiling;(number: dec64)
 ;   returns integer: dec64
 
-global dec64_coefficient;(number: dec64)
+;global dec64_coefficient;(number: dec64)
 ;   returns coefficient: int64
 
 global dec64_dec;(minuend: dec64)
@@ -112,7 +112,7 @@ global dec64_divide;(dividend: dec64, divisor: dec64)
 global dec64_equal;(comparahend: dec64, comparator: dec64)
 ;   returns comparison: dec64
 
-global dec64_exponent;(number: dec64)
+;global dec64_exponent;(number: dec64)
 ;   returns exponent: int64
 
 global dec64_floor;(number: dec64)
@@ -151,7 +151,7 @@ global dec64_multiply;(multiplicand: dec64, multiplier: dec64)
 global dec64_neg;(number: dec64)
 ;   returns negation: dec64
 
-global dec64_new;(coefficient: int64, exponent: int64)
+;global dec64_new;(coefficient: int64, exponent: int64)
 ;   returns number: dec64
 
 global dec64_normal;(number: dec64)
