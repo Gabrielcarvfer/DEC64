@@ -94,7 +94,7 @@ eight_over_ten equ -3689348814741910323
 global dec64_abs;(number: dec64)
 ;   returns absolution: dec64
 
-global dec64_add;(augend: dec64, addend: dec64)
+;global dec64_add;(augend: dec64, addend: dec64)
 ;   returns sum: dec64
 
 global dec64_ceiling;(number: dec64)

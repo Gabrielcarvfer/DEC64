@@ -52,7 +52,7 @@ int64 dec64_build(int64 coeff, int64 exp)
 
 int64 dec64_new(int64 coeff, int64 exp)
 {
-
+    //Zero is zero
     if (coeff == 0)
     {
         return 0;
@@ -66,7 +66,7 @@ int64 dec64_new(int64 coeff, int64 exp)
 
     //if too huge, become nan
 
-    //Check if number is greater than maximum, smaller than minimum or the exponent is bigger than 127
+    //Check if the exponent is greater than 127
     if (exp > MAXEXP)
     {
        //if coefficient positive, should be smaller than maxval to fit
@@ -82,7 +82,7 @@ int64 dec64_new(int64 coeff, int64 exp)
        }
     }
 
-    //check if smaller number can fit
+    //check if exponent is greater than -127 or the coefficient is greater than maximum value
     if (coeff > maxval || exp < -MAXEXP)
     {
         int prev_round = 0;
@@ -91,6 +91,7 @@ int64 dec64_new(int64 coeff, int64 exp)
         int64 texp = exp;
         int64 prev_rem = 0;
         int64 last_rem = 0;
+
         //if size is greater than maximum or exponent still smaller than -127
         while ((coeff > maxval && exp < MAXEXP) || (coeff >= 1 && exp < -MAXEXP) )
         {
@@ -108,13 +109,13 @@ int64 dec64_new(int64 coeff, int64 exp)
             exp++;
         }
 
-        //if couldn't fit, nan
+        //if couldn't fit, return nan
         if (coeff > maxval || exp > MAXEXP)
         {
             return dec64_build(0,-128);
         }
 
-        // round correctly
+        // round correctly (some roundings could have been propagated earlier and affect the results)
         int64 muls = exp - texp - 1;
 
         if(muls > 1 && muls < 15 )
@@ -202,157 +203,127 @@ neg     r2              ; r2 is the result negated
 jmp     pack            ; pack it up
 
         pad; -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
+*/
 
-dec64_add: function_with_two_parameters
-;(augend: dec64, addend: dec64) returns sum: dec64
+int64 dec64_add (int64 augend, int64 addend)
+{
+    int8_t exp1, exp2;
+    exp1 = (int8_t) augend;
+    exp2 = (int8_t) addend;
 
-; Add two dec64 numbers together.
+    int64 coeff1, coeff2;
+    coeff1 = augend>>8;
+    coeff2 = addend>>8;
 
-; Registers:
-; r0        result, imul/idiv
-; r1        first argument
-; r2        second argument, imul/idiv
-; r8        exponent of first argument
-; r9        exponent of second argument
-; r10       coefficient of first argument
-; r11       coefficient of second argument
+    //If exponent is nan
+    if (exp1 == -128 || exp2 == -128)
+        return dec64_build(0,-128);
 
-; %if the two exponents are both zero (which is usually the case for integers)
-; we can take the fast path. Since the exponents are both zero, we can simply
-; add the numbers together and check for overflow.
+    //If one of the coefficients is zero
+    if (coeff1 == 0)
+        return coeff2 == 0 ? 0 : addend;
+    if (coeff2 == 0)
+        return coeff1 == 0 ? 0 : augend;
 
-pad
+    //If the difference between exponents is bigger than 17, the bigger number isn't affected
+    if(exp1-exp2 > 17)
+        return augend;
+    if(exp2-exp1 > 17)
+        return addend;
 
-        add_begin:
+    //Before applying the basic procedure for mantissa alignment,
+    // and to prevent loss of precision, we do a trick
 
-mov     r0,r1           ; r0 is the first number
-        or      r1_b,r2_b       ; r1_b is the two exponents or'd together
-jnz     add_slow        ; %if either exponent is not zero, take the slow path
-add     r0,r2           ; add the sh%ifted coefficients together
-        jo      add_overflow    ; %if there was no overflow, we are done
-ret                     ; no need to pack
-pad
+    //Convert coefficient to positive and save flags
+    int64 tcoeff1 = coeff1 > 0 ? coeff1 : -coeff1;
+    int64 tcoeff2 = coeff2 > 0 ? coeff2 : -coeff2;
+    int neg1 = tcoeff1 != coeff1;
+    int neg2 = tcoeff2 != coeff2;
+    coeff1 = tcoeff1;
+    coeff2 = tcoeff2;
 
-        add_overflow:
+    int decimal_places1, decimal_places2;
+    decimal_places1 = decimal_places2 = 0;
 
-; %if there was an overflow (extremely unlikely) then we must make it fit.
-; pack knows how to do that.
+    //Count number of decimal places used in the mantissas
+    for (int i = 0; i < 18 ; i++)
+    {
+        decimal_places1 = tcoeff1 >= powers10[i] ? i+1 : decimal_places1;
+        decimal_places2 = tcoeff2 >= powers10[i] ? i+1 : decimal_places2;
+    }
 
-rcr     r0,1            ; divide the sum by 2 and repair its sign
-movsx   r8,r1_b         ; r8 is the exponent
-sar     r0,7            ; r0 is the coefficient of the sum
-        jmp     pack            ; pack it up
-        pad
+    //instead of dividing the mantissas, that could result in loss of precision,
+    // we first multiply whoever has higher decimal_places + exponent
+    // until it reaches the upper limit
 
-add_slow:
+    int round = 0;
 
-; The slow path is taken %if the two operands do not both have zero exponents.
+    //Align mantissas through the exponents
+    while(exp1 != exp2 && coeff2 != 0 && coeff1 != 0)
+    {
+        //multiply mantissa and reduce exponent of augend
+        if ( ( decimal_places1+exp1 >= decimal_places2+exp2 ) && ( coeff1 < ( MAXNUM + neg1 ) ) )
+        {
+            coeff1 *= 10;
+            exp1--;
+            decimal_places1++;
+            continue;
+        }
 
-mov     r1,r0           ; restore r1
-cmp     r0_b,128        ; is the first operand nan?
-je      return_nan      ; %if nan, get out
+        //multiply mantissa and reduce exponent of addend
+        if ( ( decimal_places1+exp1 < decimal_places2+exp2 ) && ( coeff2 < ( MAXNUM + neg2 ) ) )
+        {
+            coeff2 *= 10;
+            exp2--;
+            decimal_places2++;
+            continue;
+        }
 
-; Are the two exponents the same? This will happen often, especially with
-; money values.
+        //divide mantissa and increase exponent of augend
+        if (exp1 < exp2)
+        {
+            round = coeff1 % 10 >= 5;
+            coeff1 /= 10;
+            coeff1 += round;
+            exp1++;
+            continue;
+        }
 
-cmp     r1_b,r2_b       ; compare the two exponents
-jne     add_slower      ; %if not equal, take the slower path
+        //divide mantissa and increase exponent of addend
+        if (exp1 > exp2)
+        {
+            round = coeff2 % 10 >= 5;
+            coeff2 /= 10;
+            coeff2 += round;
+            exp2++;
+            continue;
+        }
+    }
 
-; The exponents match so we may add now. Zero out the exponents so there
-; will be no carry into the coefficients when the coefficients are added.
-; %if the result is zero, then return the normal zero.
+    //Convert mantissas back to the original sign and sum
+    int64 result = ( neg1 ? -coeff1 : coeff1 ) + ( neg2 ? -coeff2 : coeff2 );
 
-and     r0,-256         ; remove the exponent
-        and     r2,-256         ; remove the other exponent
-add     r0,r2           ; add the sh%ifted coefficients
-jo      add_overflow    ; %if it overflows, it must be repaired
-        cmovz   r1,r0           ; %if the coefficient is zero, the exponent is zero
-        movzx   r1,r1_b         ; mask the exponent
-        or      r0,r1           ; mix in the exponent
-ret                     ; no need to pack
-pad
+    //Return zero in case of zero
+    if (result == 0)
+        return 0;
 
-        add_slower:
+    //In case the result is bigger than the limit, try to reduce
+    while (result > MAXNUM)
+    {
+        if (exp1 == 127)
+            return dec64_build(0, -128);
+        round = result % 10 >= 5;
+        result /= 10;
+        result += round;
+        exp1++;
+    }
 
-; The slower path is taken when neither operand is nan, and their
-; exponents are d%ifferent. Before addition can take place, the exponents
-; must be made to match. Swap the numbers %if the second exponent is greater
-; than the first.
+    //Return the sum
+    return dec64_build(result, exp1);
 
-cmp     r2_b,128        ; Is the second operand nan?
-je      return_nan
-cmp     r1_b,r2_b       ; compare the exponents
-        mov     r0,r1           ; r0 is the first number
-        cmovl   r1,r2           ; r1 is the number with the larger exponent
-cmovl   r2,r0           ; r2 is the number with the smaller exponent
 
-; Sh%ift the coefficients of r1 and r2 into r10 and r11 and unpack the exponents.
-
-mov     r10,r1          ; r10 is the first number
-        mov     r11,r2          ; r11 is the second number
-        movsx   r8,r1_b         ; r8 is the first exponent
-        movsx   r9,r2_b         ; r9 is the second exponent
-        sar     r10,8           ; r10 is the first coefficient
-        sar     r11,8           ; r11 is the second coefficient
-        mov     r0,r10          ; r0 is the first coefficient
-        pad
-
-add_slower_decrease:
-
-; The coefficients are not the same. Before we can add, they must be the same.
-; We will try to decrease the first exponent. When we decrease the exponent
-; by 1, we must also multiply the coefficient by 10. We can do this as long as
-; there is no overflow. We have 8 extra bits to work with, so we can do this
-; at least twice, possibly more.
-
-imul    r0,10           ; before decrementing the exponent, multiply
-jo      add_slower_increase
-sub     r8,1            ; decrease the first exponent
-mov     r10,r0          ; r10 is the enlarged first coefficient
-cmp     r8,r9           ; are the exponents equal yet?
-jg      add_slower_decrease
-mov     r0,r11          ; r0 is the second coefficient
-
-; The exponents are now equal, so the coefficients may be added.
-
-add     r0,r10          ; add the two coefficients
-jmp     pack            ; pack it up
-        pad
-
-add_slower_increase:
-
-; We cannot decrease the first exponent any more, so we must instead try to
-; increase the second exponent, which will result in a loss of sign%ificance.
-; That is the heartbreak of floating point.
-
-; Determine how many places need to be sh%ifted. %if it is more than 17, there is
-; nothing more to add.
-
-mov     r2,r8           ; r2 is the first exponent
-        sub     r2,r9           ; r2 is the remaining exponent d%ifference
-        mov     r0,r11          ; r0 is the second coefficient
-        cmp     r2,17           ; 17 is the max digits in a packed coefficient
-ja      return_r1       ; too small to matter
-mov     r9,power
-mov     r9,[r9+r2*8]   ; r9 is the power of ten
-cqo                     ; sign extend r0 into r2
-        idiv    r9              ; divide the second coefficient by the power of 10
-test    r0,r0           ; examine the scaled coefficient
-jz      return_r1       ; too insign%ificant to add?
-
-; The exponents are now equal, so the coefficients may be added.
-
-add     r0,r10          ; add the two coefficients
-jmp     pack
-pad
-
-        return_r1:
-
-mov     r0,r1           ; r0 is the original number
-        ret
-
-pad; -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
-
+}
+/*
 dec64_inc: function_with_one_parameter
 ;(augend: dec64) returns sum: dec64
 

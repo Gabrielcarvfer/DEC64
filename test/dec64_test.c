@@ -403,7 +403,7 @@ static void test_all_add() {
     test_add(zip, zero, zero, "zip + zero");
     test_add(zip, zip, zero, "zip + zip");
     test_add(almost_one, epsilon, one, "almost_one + epsilon");
-    test_add(almost_one, nine, ten, "almost_one + 1");
+    test_add(almost_one, nine, ten, "almost_one + 9");
     test_add(one, nan, nan, "one + nan");
     test_add(one, one, two, "one + one");
     test_add(one, cent, dec64_new(101, -2), "one + cent");
