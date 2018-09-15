@@ -33,6 +33,7 @@ endif()
 
 #Add library
 add_library(dec64 STATIC
+                src/dec64.h
                 src/dec64.c
                 src/dec64.cpp
                 src/dec64_math.h
@@ -62,6 +63,9 @@ add_custom_command(
         COMMAND ${COPY_COMMAND}
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
 )
+
+#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ")
 
 #Link static library
 target_link_libraries(dec64)

@@ -43,6 +43,7 @@ dec64 dec64_asin(dec64 slope) {
     dec64 factor = slope;
     dec64 x2 = dec64_multiply(slope, slope);
     dec64 result = factor;
+    dec64 temp = 0;
     while (1) {
         factor = dec64_divide(
             dec64_multiply(
@@ -51,24 +52,30 @@ dec64 dec64_asin(dec64 slope) {
             ),
             bottom
         );
-        dec64 progress = dec64_add(
-            result,
-            dec64_divide(factor, dec64_inc(bottom))
-        );
+        temp = dec64_divide(factor, dec64_inc(bottom));
+        dec64 progress = dec64_add(result, temp);
+
+        //printf("\n%llx %llx %llx\n", progress, result, temp);
+
         if (result == progress) {
             break;
         }
         result = progress;
         bottom = dec64_add(bottom, D_2);
     }
+    //printf("\n\n\n\n");
     return result;
 }
 
 dec64 dec64_atan(dec64 slope) {
+    int64 temp = dec64_inc(dec64_multiply(slope, slope));
+    //printf("\n%llx %llx\n", slope, temp);
+
     return dec64_asin(
+
         dec64_divide(
             slope,
-            dec64_sqrt(dec64_inc(dec64_multiply(slope, slope)))
+            dec64_sqrt(temp)
         )
     );
 }
@@ -193,10 +200,9 @@ dec64 dec64_log(dec64 x) {
 
     while (1) {
         factor = dec64_multiply(factor, y);
-        dec64 progress = dec64_add(
-            result,
-            dec64_divide(factor, divisor)
-        );
+        dec64 temp = dec64_divide(factor, divisor);
+        dec64 progress = dec64_add(result, temp);
+
         if (result == progress || progress == DEC64_NAN) {
             break;
         }

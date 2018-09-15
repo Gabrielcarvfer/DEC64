@@ -10,25 +10,29 @@
 #define MAXNUM 0x007FFFFFFFFFFFFF
 #define MAXEXP 0x007F
 
-static int64 powers10[] = {1,                       // 10^00
-                           10,                      // 10^01
-                           100,                     // 10^02
-                           1000,                    // 10^03
-                           10000,                   // 10^03
-                           100000,                  // 10^04
-                           1000000,                 // 10^05
-                           10000000,                // 10^06
-                           100000000,               // 10^07
-                           1000000000,              // 10^08
-                           10000000000,             // 10^09
-                           100000000000,            // 10^10
-                           1000000000000,           // 10^11
-                           10000000000000,          // 10^12
-                           100000000000000,         // 10^13
-                           1000000000000000,        // 10^13
-                           10000000000000000,       // 10^14
-                           100000000000000000,      // 10^15
-                           1000000000000000000,     // 10^16
+static int64 powers10[] = {(int64) 1,                       // 10^00
+                           (int64) 10,                      // 10^01
+                           (int64) 100,                     // 10^02
+                           (int64) 1000,                    // 10^03
+                           (int64) 10000,                   // 10^03
+                           (int64) 100000,                  // 10^04
+                           (int64) 1000000,                 // 10^05
+                           (int64) 10000000,                // 10^06
+                           (int64) 100000000,               // 10^07
+                           (int64) 1000000000,              // 10^08
+                           (int64) 10000000000,             // 10^09
+                           (int64) 100000000000,            // 10^10
+                           (int64) 1000000000000,           // 10^11
+                           (int64) 10000000000000,          // 10^12
+                           (int64) 100000000000000,         // 10^13
+                           (int64) 1000000000000000,        // 10^13
+                           (int64) 10000000000000000,       // 10^14
+                           (int64) 100000000000000000,      // 10^15
+                           (int64) 1000000000000000000,     // 10^16
+                           (int64) 10000000000000000000,     // 10^17
+                           (int64) 100000000000000000000,     // 10^18
+                           (int64) 1000000000000000000000,     // 10^19
+
 
                            };
 
@@ -50,95 +54,7 @@ int64 dec64_build(int64 coeff, int64 exp)
     return (coeff << 8) | (0x0FF & exp);
 }
 
-int64 dec64_new(int64 coeff, int64 exp)
-{
-    //Zero is zero
-    if (coeff == 0)
-    {
-        return 0;
-    }
 
-    //If coefficient is negative, invert to simplify the logic
-    int neg = coeff < 0;
-    coeff = neg ? -coeff : coeff;
-
-    int64 maxval = neg ? MAXNUM+1 : MAXNUM;
-
-    //if too huge, become nan
-
-    //Check if the exponent is greater than 127
-    if (exp > MAXEXP)
-    {
-       //if coefficient positive, should be smaller than maxval to fit
-       while (exp > MAXEXP && coeff < maxval && exp >= -MAXEXP)
-       {
-           coeff *= 10;
-           exp--;
-       }
-       //if couldn't fit, nan
-       if (coeff > maxval || exp > MAXEXP)
-       {
-           return dec64_build(0,-128);
-       }
-    }
-
-    //check if exponent is greater than -127 or the coefficient is greater than maximum value
-    if (coeff > maxval || exp < -MAXEXP)
-    {
-        int prev_round = 0;
-        int round = 0;
-        int64 tcoeff = coeff;
-        int64 texp = exp;
-        int64 prev_rem = 0;
-        int64 last_rem = 0;
-
-        //if size is greater than maximum or exponent still smaller than -127
-        while ((coeff > maxval && exp < MAXEXP) || (coeff >= 1 && exp < -MAXEXP) )
-        {
-            prev_rem = last_rem;
-            //check if we need to round the number before dividing
-            round = ((coeff % 10) >= 5);// if ending in 17, after dividing we get 1 + round = 2
-
-            //But try to prevent rounding propagation as in 1049/10 = 104.9 ~ 105, 105/10 = 10.5 ~ 11 when it should be 10
-            round = (prev_rem <= 50 && prev_round != 0) ? 0 : round;
-            prev_round = round;
-            last_rem = coeff % 100;
-
-            coeff /= 10;
-            coeff += round ;
-            exp++;
-        }
-
-        //if couldn't fit, return nan
-        if (coeff > maxval || exp > MAXEXP)
-        {
-            return dec64_build(0,-128);
-        }
-
-        // round correctly (some roundings could have been propagated earlier and affect the results)
-        int64 muls = exp - texp - 1;
-
-        if(muls > 1 && muls < 15 )
-        {
-            int64 temp2 = tcoeff / powers10[muls+1];
-            if (coeff-temp2 > 0)
-            {
-                int64 temp1 = tcoeff / powers10[muls];
-                coeff = temp2 + ((temp1 % 10) >= 5 ? 1 : 0);
-            }
-        }
-
-        //if couldn't adjust, return zero
-        if (exp < -MAXEXP || coeff == 0)
-        {
-            return 0;
-        }
-    }
-
-    //Normalized values are saved
-    coeff = neg ? -coeff : coeff;
-    return dec64_build(coeff, exp);
-}
 
 
 /*
@@ -205,232 +121,265 @@ jmp     pack            ; pack it up
         pad; -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 */
 
-int64 dec64_add (int64 augend, int64 addend)
+int64 dec64_pack(int64 coeff, int64 exp)
+{
+    //Zero is zero
+    if (coeff == 0 && exp != -128)
+        return 0;
+
+    //Nan is nan
+    if (coeff == 0 && exp == -128)
+        return DEC64_NAN;
+
+    int negc = coeff < 0;
+    coeff = negc ? -coeff : coeff;
+
+    int64 original_exp = exp;
+    int64 original_coeff = coeff;
+
+    int64 maxval = negc ? MAXNUM+1 : MAXNUM;
+    int round=0;
+
+    //Pack procedures
+    while (1)
+    {
+        //equivalent to pack_decrease
+        if (exp > 127)
+        {
+            int64 tcoeff = coeff * 10;
+
+            if (tcoeff < 0)             //If overflows, nan
+                return DEC64_NAN;
+            coeff = tcoeff;             //Otherwise, continue
+            exp--;
+            continue;
+        }
+
+        //equivalent to pack_increase and
+        //equivalent to pack_large
+        if(coeff > maxval || exp < -127)
+        {
+            //Couldn't save the value
+            if (exp == 127)
+                return DEC64_NAN;
+            //No more divisions to make
+            if (coeff == 0)
+                break;
+            coeff /= 10;
+            exp++;
+            continue;
+        }
+
+        //If doesn't need any procedure, break loop and procede
+        break;
+    }
+
+    //round properly - may overflow maxval
+    int muls = exp - original_exp;
+    if (muls > 0 && muls <= 19)
+    {
+        int64 temp2 = original_coeff / powers10[muls-1];
+        coeff = coeff + ((temp2 % 10 >= 5) ? 1 : 0);
+
+        if (coeff > maxval)
+        {
+            round = coeff % 10;
+            coeff += (round >= 5 && coeff > 10) ? 10 - round : 0;
+            coeff /= 10;
+            exp++;
+        }
+    }
+
+    if (coeff == 0)
+        return 0;
+
+
+    coeff = negc ? -coeff : coeff;
+    return dec64_build(coeff, exp);
+}
+
+
+int64 dec64_new(int64 coeff, int64 exp)
+{
+    return dec64_pack(coeff, exp);
+}
+
+int64 dec64_add_proc(int64 augend, int64 addend, int subtraction)
 {
     int8_t exp1, exp2;
     exp1 = (int8_t) augend;
     exp2 = (int8_t) addend;
 
+    //If exponent is nan
+    if (exp1 == -128 || exp2 == -128)
+        return DEC64_NAN;
+
+    //If not, we continue
     int64 coeff1, coeff2;
     coeff1 = augend>>8;
     coeff2 = addend>>8;
 
-    //If exponent is nan
-    if (exp1 == -128 || exp2 == -128)
-        return dec64_build(0,-128);
-
-    //If one of the coefficients is zero
+    //If one of the coefficients is zero, return the other argument
     if (coeff1 == 0)
-        return coeff2 == 0 ? 0 : addend;
+        return coeff2 == 0 ? 0 : subtraction ? dec64_pack(-coeff2, exp2): addend; // << 8 | 0x0FF & exp2 : addend;
     if (coeff2 == 0)
         return coeff1 == 0 ? 0 : augend;
 
-    //If the difference between exponents is bigger than 17, the bigger number isn't affected
+    //If the difference between exponents is bigger than 17, the bigger number isn't affected,
+    // unless we're working on a subtraction and the second parameter is being returned
     if(exp1-exp2 > 17)
         return augend;
     if(exp2-exp1 > 17)
-        return addend;
+        return (subtraction ? -coeff2 << 8 | 0x0FF & exp2 : addend);
 
-    //Before applying the basic procedure for mantissa alignment,
-    // and to prevent loss of precision, we do a trick
+    //Invert arguments and keep the higher exponent on coeff1|exp1
+    int inverted = 0;
+    if(exp1 < exp2)
+    {
+        int64 temp = exp1;
+        exp1 = exp2;
+        exp2 = temp;
+        temp = coeff1;
+        coeff1 = coeff2;
+        coeff2 = temp;
+        inverted = 1;
+    }
+
+    //If exponents are equal
+    if (exp1 == exp2)
+    {
+        //Check for overflow
+        int64 temp;
+        if (subtraction)
+        {
+            temp = inverted ? coeff2 - coeff1 : coeff1 - coeff2;
+        }
+        else
+        {
+            temp = coeff1+coeff2;
+        }
+        int overflow = 0;
+        overflow += coeff1 > 0 && coeff2 > 0 && temp < 0 ? 1 : 0;
+        overflow += coeff1 < 0 && coeff2 < 0 && temp > 0 ? 2 : 0;
+
+        if (overflow == 0)
+        {
+            //adjust to fit, but the result is ready
+            return dec64_pack(temp, exp1);
+        }
+        else
+        {
+            //positive and negative overflows
+            temp = temp >> 1;
+            temp |= 0x0040000000000000;
+            return dec64_pack(temp, exp1);
+        }
+    }
+
+
 
     //Convert coefficient to positive and save flags
-    int64 tcoeff1 = coeff1 > 0 ? coeff1 : -coeff1;
-    int64 tcoeff2 = coeff2 > 0 ? coeff2 : -coeff2;
-    int neg1 = tcoeff1 != coeff1;
-    int neg2 = tcoeff2 != coeff2;
-    coeff1 = tcoeff1;
-    coeff2 = tcoeff2;
+    int neg1 = coeff1 < 0;
+    int neg2 = coeff2 < 0;
+    coeff1 = neg1 ? -coeff1 : coeff1;
+    coeff2 = neg2 ? -coeff2 : coeff2;
 
-    int decimal_places1, decimal_places2;
-    decimal_places1 = decimal_places2 = 0;
-
-    //Count number of decimal places used in the mantissas
-    for (int i = 0; i < 18 ; i++)
+    //Align mantissas through the exponents until
+    //equivalent to add slower_decrease and add_slower
+    int64   tcoeff1 = coeff1 * 10;
+    int8_t  texp1 = exp1-1;
+    while( (tcoeff1 < MAXNUM || ( subtraction & (!neg1&!neg2) | (neg1&!neg2) ) ) && exp1 > exp2 && tcoeff1 >= 0)
     {
-        decimal_places1 = tcoeff1 >= powers10[i] ? i+1 : decimal_places1;
-        decimal_places2 = tcoeff2 >= powers10[i] ? i+1 : decimal_places2;
+        coeff1 = tcoeff1;
+        exp1 = texp1;
+        tcoeff1 *= 10;
+        texp1--;
     }
 
-    //instead of dividing the mantissas, that could result in loss of precision,
-    // we first multiply whoever has higher decimal_places + exponent
-    // until it reaches the upper limit
+     //divide mantissa and increase exponent of addend
+    int expdiff = exp1-exp2;
 
-    int round = 0;
-
-    //Align mantissas through the exponents
-    while(exp1 != exp2 && coeff2 != 0 && coeff1 != 0)
+    if (expdiff > 0)
     {
-        //multiply mantissa and reduce exponent of augend
-        if ( ( decimal_places1+exp1 >= decimal_places2+exp2 ) && ( coeff1 < ( MAXNUM + neg1 ) ) )
-        {
-            coeff1 *= 10;
-            exp1--;
-            decimal_places1++;
-            continue;
-        }
-
-        //multiply mantissa and reduce exponent of addend
-        if ( ( decimal_places1+exp1 < decimal_places2+exp2 ) && ( coeff2 < ( MAXNUM + neg2 ) ) )
-        {
-            coeff2 *= 10;
-            exp2--;
-            decimal_places2++;
-            continue;
-        }
-
-        //divide mantissa and increase exponent of augend
-        if (exp1 < exp2)
-        {
-            round = coeff1 % 10 >= 5;
-            coeff1 /= 10;
-            coeff1 += round;
-            exp1++;
-            continue;
-        }
-
-        //divide mantissa and increase exponent of addend
-        if (exp1 > exp2)
-        {
-            round = coeff2 % 10 >= 5;
-            coeff2 /= 10;
-            coeff2 += round;
-            exp2++;
-            continue;
-        }
+        coeff2 /= powers10[expdiff-1];
+        int round = coeff2 % 10;
+        coeff2 += (round >= 5) ? 10 - round : 0;
+        coeff2 /= 10;
+        exp2 = exp1;
     }
 
+    if(coeff2 == 0)
+        return inverted? addend : augend;
+
+    coeff1 = neg1? -coeff1 : coeff1;
+    coeff2 = neg2? -coeff2 : coeff2;
+    
     //Convert mantissas back to the original sign and sum
-    int64 result = ( neg1 ? -coeff1 : coeff1 ) + ( neg2 ? -coeff2 : coeff2 );
+    int64 result = 0;
+    if (subtraction)
+        result = inverted ? coeff2 - coeff1 : coeff1 - coeff2;
+    else
+        result = coeff1 + coeff2;
 
-    //Return zero in case of zero
-    if (result == 0)
-        return 0;
-
-    //In case the result is bigger than the limit, try to reduce
-    while (result > MAXNUM)
-    {
-        if (exp1 == 127)
-            return dec64_build(0, -128);
-        round = result % 10 >= 5;
-        result /= 10;
-        result += round;
-        exp1++;
-    }
-
-    //Return the sum
-    return dec64_build(result, exp1);
-
+    //Try to fit and return value
+    return dec64_pack(result, exp1);
 
 }
+
+int64 dec64_inc(int64 augend)
+{
+    int64 exp = (int8_t) augend;
+
+    //A nan is a nan
+    if (exp == -128)
+        return DEC64_NAN;
+
+    //If exponents are not equal, resort to ADD
+    if (exp != 0)
+        return dec64_add(augend, DEC64_ONE);
+
+    //If exponents are equal, then add 1 and adjust to fit if necessary
+    int64 coeff = augend>>8;
+
+    //Increment
+    coeff++;
+
+    //In case the result is bigger than the limit, try to reduce
+    return dec64_pack(coeff, exp);
+}
+
+int64 dec64_dec(int64 minuend)
+{
+    int64 exp = (int8_t) minuend;
+
+    //A nan is a nan
+    if (exp == -128)
+        return DEC64_NAN;
+
+    //If exponents are not equal, resort to ADD
+    if (exp != 0)
+        return dec64_subtract(minuend, DEC64_ONE);
+
+    //If exponents are equal, then add 1 and adjust to fit if necessary
+    int64 coeff = minuend>>8;
+
+    //Decrement
+    coeff--;
+
+    //In case the result is bigger than the limit, try to reduce
+    return dec64_pack(coeff, exp);
+}
+
+int64 dec64_add(int64 augend, int64 addend)
+{
+    return dec64_add_proc(augend, addend, 0);
+}
+
+int64 dec64_subtract(int64 minuend, int64 subtrahend)
+{
+    return dec64_add_proc( minuend, subtrahend, 1);
+}
 /*
-dec64_inc: function_with_one_parameter
-;(augend: dec64) returns sum: dec64
-
-; Increment a number. In most cases, this will be a faster way to add one than
-; dec64_add.
-
-test    r1_b,r1_b       ; what is the exponent?
-jnz     inc_not_integer
-
-; The number is an integer. This might be easy.
-
-mov     r0,100h         ; r0 is one
-        add     r0,r1           ; r0 is the sum
-jo      inc_hardway     ; overflow (very rare)
-ret
-        pad
-
-inc_not_integer:
-
-js      inc_negative_exponent
-
-test    r1,-256         ; is the coefficient zero?
-jz      return_one      ; %if so, the result is one
-cmp     r1_b,17         ; is the number too enormous to increment?
-jge     return_r1       ; then return the number
-
-inc_hardway:
-
-mov     r2,100h         ; r2 is one
-        tail_with_two_parameters dec64_add
-        pad
-
-inc_negative_exponent:
-
-cmp     r1_b,128        ; is the number nan?
-je      return_nan
-cmp     r1_b,-17        ; is the number too small to increment?
-jle     return_one      ; then return one
-
-        movsx   r8,r1_b         ; r8 is the negative exponent
-        neg     r8              ; flip the sign
-        mov     r9,power
-        mov     r0,[r9+r8*8]   ; r0 is 10^(-exponent)
-shl     r0,8            ; convert to dec64
-        add     r0,r1           ; now we add
-        jo      inc_hardway     ; %if it overflows, do it the hard way
-ret
-
-        pad; -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
-
-dec64_dec: function_with_one_parameter
-;(minuend: dec64) returns d%ifference: dec64
-
-; Increment a number. In most cases, this will be a faster way to subtract one
-; than dec64_subtract.
-
-test    r1_b,r1_b       ; what is the exponent?
-jnz     dec_not_integer
-
-
-; The number is an integer. This might be easy.
-
-mov     r0,-256         ; r0 is negative one
-add     r0,r1           ; r0 is the d%ifference
-        jo      dec_hardway     ; overflow (very rare)
-ret
-        pad
-
-dec_not_integer:
-
-js      dec_negative_exponent
-
-test    r1,-256         ; is the coefficient zero?
-jz      dec_neg_one     ; %if so, the result is negative one
-        cmp     r1_b,17         ; is the number too enormous to decrement?
-jge     return_r1       ; then return the number
-
-dec_hardway:
-
-mov     r2,100h         ; r2 is one
-        tail_with_two_parameters dec64_subtract
-        pad
-
-dec_negative_exponent:
-
-cmp     r1_b,128        ; is the number nan?
-je      return_nan
-cmp     r1_b,-17        ; is the number too small to decrement?
-jle     dec_neg_one     ; then return negative one
-
-movsx   r8,r1_b         ; r8 is the negative exponent
-        neg     r8              ; flip the sign
-        mov     r9,power
-        mov     r0,[r9+r8*8]   ; r0 is 10^(-exponent)
-neg     r0              ; go negative
-shl     r0,8            ; convert to dec64
-        add     r0,r1           ; now we subtract
-        jo      dec_hardway     ; %if it overflows, do it the hard way
-ret
-        pad
-
-dec_neg_one:
-
-mov     r0,-256         ; r0 is -1
-ret
-
-        pad; -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
 dec64_ceiling: function_with_one_parameter
 ;(number: dec64) returns integer: dec64
@@ -505,99 +454,6 @@ shl     r0,8            ; pack the coefficient
 
 pad; -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
-dec64_subtract: function_with_two_parameters
-;(minuend: dec64, subtrahend: dec64) returns d%ifference: dec64
-
-; Subtract the dec64 number in r2 from the dec64 number in r1.
-; The result is in r0.
-
-; This is the same as dec64_add, except that the operand in r2 has its
-; coefficient complemented first.
-
-xor     r2,-256         ; not the coefficient only
-add     r2,256          ; the two's complement increment of the coefficient
-jno     add_begin       ; %if there is no overflow, begin the beguine
-
-; The subtrahend coefficient is -36028797018963968. This value cannot easily be
-; complemented, so take the slower path. This should be extremely rare.
-
-cmp     r1_b,128        ; is the first operand nan
-        sete    r0_b
-        cmp     r2_b,128        ; is the second operand nan?
-sete    r0_h
-or      r0_b,r0_h       ; is either nan?
-jnz     return_nan
-mov     r10,r1          ; r10 is the first coefficient
-        movsx   r8,r1_b         ; r8 is the first exponent
-        sar     r10,8
-movsx   r9,r2_b         ; r9 is the second exponent
-        mov     r11,80000000000000H ; r11 is 36028797018963968
-mov     r0,r10          ; r0 is the first coefficient
-        cmp     r8,r9           ; %if the second exponent is larger, swap
-        jge     subtract_slower_decrease_compare
-        mov     r0,r11          ; r0 is the second coefficient
-        xchg    r8,r9           ; swap the exponents
-        xchg    r10,r11         ; swap the coefficients
-        jmp     subtract_slower_decrease_compare
-        pad
-
-subtract_slower_decrease:
-
-; The coefficients are not the same. Before we can add, they must be the same.
-; We will try to decrease the first exponent. When we decrease the exponent
-; by 1, we must also multiply the coefficient by 10. We can do this as long as
-; there is no overflow. We have 8 extra bits to work with, so we can do this
-; at least twice, possibly more.
-
-imul    r0,10           ; before decrementing the exponent, multiply
-jo      subtract_slower_increase
-sub     r8,1            ; decrease the first exponent
-mov     r10,r0          ; r10 is the enlarged first coefficient
-pad
-
-        subtract_slower_decrease_compare:
-
-cmp     r8,r9           ; are the exponents equal yet?
-jg      subtract_slower_decrease
-mov     r0,r11          ; r0 is the second coefficient
-
-; The exponents are now equal, so the coefficients may be added.
-
-add     r0,r10          ; add the two coefficients
-jmp     pack            ; pack it up
-        pad
-
-subtract_slower_increase:
-
-; We cannot decrease the first exponent any more, so we must instead try to
-; increase the second exponent, which will result in a loss of sign%ificance.
-; That is the heartbreak of floating point.
-
-; Determine how many places need to be sh%ifted. %if it is more than 17, there is
-; nothing more to add.
-
-mov     r2,r8           ; r2 is the first exponent
-        sub     r2,r9           ; r2 is the remaining exponent d%ifference
-        mov     r0,r11          ; r0 is the second coefficient
-        cmp     r2,17           ; 17 is the max digits in a packed coefficient
-ja      subtract_underflow ; too small to matter
-mov     r9,power
-mov     r9,[r9+r2*8]   ; r9 is the power of ten
-cqo                     ; sign extend r0 into r2
-        idiv    r9              ; divide the second coefficient by the power of 10
-
-; The exponents are now equal, so the coefficients may be added.
-
-add     r0,r10          ; add the two coefficients
-jmp     pack
-pad
-
-        subtract_underflow:
-
-mov     r0,r10          ; r0 is the first coefficient
-        jmp     pack
-
-        pad; -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
 dec64_multiply: function_with_two_parameters
 ;(multiplicand: dec64, multiplier: dec64) returns product: dec64

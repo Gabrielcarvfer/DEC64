@@ -145,6 +145,7 @@ static void judge_unary(
     } else {
         nr_fail += 1;
         if (level >= 1) {
+            int64 error = dec64_subtract(actual, expected);
             printf("\n\nFAIL %s: %s", name, comment);
             if (level >= 2) {
                 printf("\n%-4s", op);
@@ -152,7 +153,7 @@ static void judge_unary(
                 printf("\n%-4s", "?");
                 print_dec64(actual);
                 printf("  (error ");
-                print_dec64(dec64_subtract(actual, expected));
+                print_dec64(error);
                 printf(")\n%-4s", "=");
                 print_dec64(expected);
             }
