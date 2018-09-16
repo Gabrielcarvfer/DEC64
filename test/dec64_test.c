@@ -1395,6 +1395,7 @@ static void test_all_subtract() {
     test_subtract(maxnum, negative_maxint, maxnum, "maxnum - -maxint");
     test_subtract(maxnum, maxnum, zero, "maxnum - maxnum");
     test_subtract(almost_negative_one, almost_negative_one, zero, "almost_negative_one - almost_negative_one");
+    test_subtract(dec64_new(-7853981633974479, 16), dec64_new(-7853981633974483, 16), dec64_new(4, 16), "error atan -1");
 }
 
 static int do_tests(int level_of_detail) {

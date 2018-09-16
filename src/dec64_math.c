@@ -55,8 +55,6 @@ dec64 dec64_asin(dec64 slope) {
         temp = dec64_divide(factor, dec64_inc(bottom));
         dec64 progress = dec64_add(result, temp);
 
-        //printf("\n%llx %llx %llx\n", progress, result, temp);
-
         if (result == progress) {
             break;
         }

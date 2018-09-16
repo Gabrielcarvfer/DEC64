@@ -132,12 +132,12 @@ int64 dec64_pack(int64 coeff, int64 exp)
         return DEC64_NAN;
 
     int negc = coeff < 0;
+    int64 maxval = negc ? MAXNUM+1 : MAXNUM;
     coeff = negc ? -coeff : coeff;
 
     int64 original_exp = exp;
     int64 original_coeff = coeff;
 
-    int64 maxval = negc ? MAXNUM+1 : MAXNUM;
     int round=0;
 
     //Pack procedures
@@ -178,6 +178,7 @@ int64 dec64_pack(int64 coeff, int64 exp)
     int muls = exp - original_exp;
     if (muls > 0 && muls <= 19)
     {
+        int64 tcoeff = coeff;
         int64 temp2 = original_coeff / powers10[muls-1];
         coeff = coeff + ((temp2 % 10 >= 5) ? 1 : 0);
 
@@ -188,6 +189,10 @@ int64 dec64_pack(int64 coeff, int64 exp)
             coeff /= 10;
             exp++;
         }
+
+        //Verify the distance between rounded and non-rounded numbers
+        //if ( (original_coeff - coeff) > (original_coeff - tcoeff) )
+        //    coeff = tcoeff;
     }
 
     if (coeff == 0)
@@ -202,6 +207,16 @@ int64 dec64_pack(int64 coeff, int64 exp)
 int64 dec64_new(int64 coeff, int64 exp)
 {
     return dec64_pack(coeff, exp);
+}
+
+int checkPowerOf10(int64 coeff)
+{
+    for (int i = 0; i < 20; i++)
+    {
+        if (coeff < powers10[i])
+            return i;
+    }
+    return 0;
 }
 
 int64 dec64_add_proc(int64 augend, int64 addend, int subtraction)
@@ -225,10 +240,16 @@ int64 dec64_add_proc(int64 augend, int64 addend, int subtraction)
     if (coeff2 == 0)
         return coeff1 == 0 ? 0 : augend;
 
+
     //If the difference between exponents is bigger than 17, the bigger number isn't affected,
     // unless we're working on a subtraction and the second parameter is being returned
     if(exp1-exp2 > 17)
-        return augend;
+    {
+        //Before returning, check if the second value can be truncated (n divisions by 10 makes it fit)
+        int k = checkPowerOf10(coeff2);
+        if (exp1-exp2-k > 17)
+            return augend;
+    }
     if(exp2-exp1 > 17)
         return (subtraction ? -coeff2 << 8 | 0x0FF & exp2 : addend);
 
@@ -245,67 +266,59 @@ int64 dec64_add_proc(int64 augend, int64 addend, int subtraction)
         inverted = 1;
     }
 
-    //If exponents are equal
-    if (exp1 == exp2)
-    {
-        //Check for overflow
-        int64 temp;
-        if (subtraction)
-        {
-            temp = inverted ? coeff2 - coeff1 : coeff1 - coeff2;
-        }
-        else
-        {
-            temp = coeff1+coeff2;
-        }
-        int overflow = 0;
-        overflow += coeff1 > 0 && coeff2 > 0 && temp < 0 ? 1 : 0;
-        overflow += coeff1 < 0 && coeff2 < 0 && temp > 0 ? 2 : 0;
-
-        if (overflow == 0)
-        {
-            //adjust to fit, but the result is ready
-            return dec64_pack(temp, exp1);
-        }
-        else
-        {
-            //positive and negative overflows
-            temp = temp >> 1;
-            temp |= 0x0040000000000000;
-            return dec64_pack(temp, exp1);
-        }
-    }
-
-
-
     //Convert coefficient to positive and save flags
     int neg1 = coeff1 < 0;
     int neg2 = coeff2 < 0;
     coeff1 = neg1 ? -coeff1 : coeff1;
     coeff2 = neg2 ? -coeff2 : coeff2;
 
+    //Adjust numbers
+    int pow10coeff1 = checkPowerOf10(coeff1);
+    int pow10coeff2 = checkPowerOf10(coeff2);
+
     //Align mantissas through the exponents until
     //equivalent to add slower_decrease and add_slower
     int64   tcoeff1 = coeff1 * 10;
     int8_t  texp1 = exp1-1;
-    while( (tcoeff1 < MAXNUM || ( subtraction & (!neg1&!neg2) | (neg1&!neg2) ) ) && exp1 > exp2 && tcoeff1 >= 0)
+    while( (tcoeff1 < MAXNUM || ( subtraction & (!neg1&!neg2) | (neg1&!neg2) ) ) && exp1 > exp2 && pow10coeff1 < 18)
     {
         coeff1 = tcoeff1;
         exp1 = texp1;
         tcoeff1 *= 10;
         texp1--;
+        pow10coeff1++;
     }
 
      //divide mantissa and increase exponent of addend
     int expdiff = exp1-exp2;
 
+    //while (expdiff > 17)
+    if (expdiff > 17)
+        return dec64_pack(coeff1, exp1);
+
     if (expdiff > 0)
     {
+        int64 tcoeff2, original_coeff2;
+        tcoeff2 = original_coeff2 = coeff2;
+
         coeff2 /= powers10[expdiff-1];
         int round = coeff2 % 10;
         coeff2 += (round >= 5) ? 10 - round : 0;
         coeff2 /= 10;
         exp2 = exp1;
+
+        /* Proper rounding to nearest number?
+        tcoeff2 /= powers10[expdiff];
+
+        int64 diffNotRounded = tcoeff2*powers10[expdiff] - original_coeff2;
+        int64 diffRounded = coeff2*powers10[expdiff] - original_coeff2;
+        diffNotRounded = diffNotRounded < 0 ? -diffNotRounded : diffNotRounded;
+        diffRounded = diffRounded < 0 ? -diffRounded : diffRounded;
+
+        if (diffNotRounded < diffRounded)
+            coeff2 = tcoeff2;
+        */
+
     }
 
     if(coeff2 == 0)
