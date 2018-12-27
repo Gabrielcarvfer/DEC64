@@ -94,7 +94,7 @@ eight_over_ten equ -3689348814741910323
 global dec64_abs;(number: dec64)
 ;   returns absolution: dec64
 
-global dec64_ceiling;(number: dec64)
+;global dec64_ceiling;(number: dec64)
 ;   returns integer: dec64
 
 global dec64_divide;(dividend: dec64, divisor: dec64)
@@ -103,7 +103,7 @@ global dec64_divide;(dividend: dec64, divisor: dec64)
 global dec64_equal;(comparahend: dec64, comparator: dec64)
 ;   returns comparison: dec64
 
-global dec64_floor;(number: dec64)
+;global dec64_floor;(number: dec64)
 ;   returns integer: dec64
 
 global dec64_half;(dividend: dec64)

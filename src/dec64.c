@@ -306,19 +306,6 @@ int64 dec64_add_proc(int64 augend, int64 addend, int subtraction)
         coeff2 += (round >= 5) ? 10 - round : 0;
         coeff2 /= 10;
         exp2 = exp1;
-
-        /* Proper rounding to nearest number?
-        tcoeff2 /= powers10[expdiff];
-
-        int64 diffNotRounded = tcoeff2*powers10[expdiff] - original_coeff2;
-        int64 diffRounded = coeff2*powers10[expdiff] - original_coeff2;
-        diffNotRounded = diffNotRounded < 0 ? -diffNotRounded : diffNotRounded;
-        diffRounded = diffRounded < 0 ? -diffRounded : diffRounded;
-
-        if (diffNotRounded < diffRounded)
-            coeff2 = tcoeff2;
-        */
-
     }
 
     if(coeff2 == 0)
@@ -392,81 +379,75 @@ int64 dec64_subtract(int64 minuend, int64 subtrahend)
 {
     return dec64_add_proc( minuend, subtrahend, 1);
 }
+
+int64 dec64_round_proc(int64 num, int64 roundup)
+{
+    // Check if NaN
+    if (dec64_is_any_nan(num))
+        return DEC64_NAN;
+
+    // Check if zero
+    int64 coeff = dec64_coefficient(num);
+    if (coeff == 0)
+        return DEC64_ZERO;
+
+    // If exponent >= 0, return the input number
+    int64 exp   = dec64_exponent(num);
+    if (exp > 0)
+        return num;
+
+    // If exponent < 0, round up (ceil) or down (floor)
+    int ceil;
+    ceil = roundup == DEC64_ONE ? 1 : 0;
+
+    int positive = coeff > 0;
+    int64 absCoeff = positive? coeff : -coeff;
+    int64 absExp   = exp   > 0 ? exp   : -exp;
+
+    int power = checkPowerOf10(absCoeff);
+    int expDiff = power - absExp; //remember that exp < 0
+
+
+    int round;
+
+    //Round numbers -inf<x<1
+    if (expDiff <= 0)
+    {
+        if (positive ^ ceil)
+            absCoeff = 0;
+        else
+            absCoeff = 1;
+        absExp   = 0;
+    }
+
+    //Divide and round
+    while(absExp > 0)
+    {
+        round = (!(positive ^ ceil) && absCoeff % 10) * 10;
+        absCoeff += round; //add or subtract rounding if number is positive or negative
+        absCoeff /= 10;
+        absExp -= 1;
+        power -= 1;
+    }
+
+
+    coeff = coeff > 0 ? absCoeff : -absCoeff;
+    exp   = exp   > 0 ? absExp   : -absExp;
+
+    return dec64_build(coeff, exp);
+}
+
+
+int64 dec64_ceiling(int64 num)
+{
+    return dec64_round_proc(num, DEC64_ONE);
+}
+
+int64 dec64_floor(int64 num)
+{
+    return dec64_round_proc(num, DEC64_ZERO);
+}
 /*
-
-dec64_ceiling: function_with_one_parameter
-;(number: dec64) returns integer: dec64
-
-; Produce the smallest integer that is greater than or equal to the number. In
-; the result, the exponent will be greater than or equal to zero unless it is
-; nan. Numbers with positive exponents will not be mod%ified, even %if the
-; numbers are outside of the safe integer range.
-
-; Preserved: r11.
-
-mov     r9,1            ; r9 is the round up flag
-jmp     floor_begin
-
-pad; -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
-
-dec64_floor: function_with_one_parameter
-;(number: dec64) returns integer: dec64
-
-; Produce the largest integer that is less than or equal to the number. This
-; is sometimes called the entier function. In the result, the exponent will be
-; greater than or equal to zero unless it is nan. Numbers with positive
-; exponents will not be mod%ified, even %if the numbers are outside of the safe
-; integer range.
-
-; Preserved: r11.
-
-mov     r9,-1           ; r9 is the round down flag
-pad
-
-        floor_begin:
-
-cmp     r1_b,128        ; compare the exponent to nan
-        je      return_nan       ; %if the exponent is nan, the result is nan
-        mov     r0,r1           ; r0 is the number
-movsx   r8,r1_b         ; r8 is the exponent
-sar     r0,8            ; r0 is the coefficient
-cmovz   r1,r0           ; %if the coefficient is zero, the number is zero
-        neg     r8              ; r8 is the negated exponent
-        test    r1_b,r1_b       ; examine the exponent
-        jns     return_r1       ; nothing to do unless the exponent was negative
-        cmp     r8,17           ; is the exponent is too extreme?
-jae     floor_micro     ; deal with a micro number
-        mov     r10,power
-        mov     r10,[r10+r8*8] ; r10 is the power of ten
-cqo                     ; sign extend r0 into r2
-        idiv    r10             ; divide r2:r0 by 10
-test    r2,r2           ; examine the remainder
-        jnz     floor_remains   ; deal with the remainder
-shl     r0,8            ; pack the coefficient
-        ret
-pad
-
-        floor_micro:
-
-mov     r2,r0           ; r2 is the coefficient
-xor     r0,r0           ; r0 is zero
-        pad
-
-floor_remains:
-
-; %if the remainder is negative and the rounding flag is negative, then we need
-; to decrement r0. But %if the remainder and the rounding flag are both
-; positive, then we need to increment r0.
-
-xor     r10,r10         ; r10 is zero
-        xor     r2,r9           ; xor the remainder and the rounding
-cmovs   r9,r10          ; %if they had d%ifferent signs, clear the rounding
-add     r0,r9           ; add the rounding to the coefficient
-shl     r0,8            ; pack the coefficient
-        ret
-
-pad; -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
-
 
 dec64_multiply: function_with_two_parameters
 ;(multiplicand: dec64, multiplier: dec64) returns product: dec64

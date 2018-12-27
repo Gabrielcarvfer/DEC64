@@ -1157,6 +1157,7 @@ static void test_all_new() {
     test_new( 9223372036854775807,  -145,      (9LL << 8) + (0xff & -127), "9223372036854775807e-145");
     test_new(-9223372036854775807,  -146,             (-1 << 8) + (0x081), "-9223372036854775807e-146");
     test_new( 9223372036854775807,  -146,     (1LL << 8) + (0x0ff & -127), "9223372036854775807e-146");
+    test_new(   20000000000000000,  -16,                         (2<<8)+0, "two");
 }
 
 void test_all_normal() {
@@ -1412,11 +1413,11 @@ static int do_tests(int level_of_detail) {
 
     //test_all_abs();
     test_all_add();
-    //test_all_ceiling();
+    test_all_ceiling();
     test_all_dec();
     //test_all_divide();
     //test_all_equal();
-    //test_all_floor();
+    test_all_floor();
     //test_all_half();
     test_all_inc();
     //test_all_int();
